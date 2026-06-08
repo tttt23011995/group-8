@@ -141,14 +141,14 @@ function KPICards({ data }: { data: KPIData }) {
         return (
           <div
             key={kpi.label}
-            className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:shadow-blue-900/20"
+            className="relative z-1 theme-card rounded-xl overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:shadow-blue-900/20"
             style={{ borderLeft: '4px solid', borderLeftColor: kpi.color }}
           >
             <div className="p-4 sm:p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-slate-400 font-medium">{kpi.label}</p>
-                  <p className="text-xl sm:text-2xl font-bold text-white mt-1">{kpi.value}</p>
+                  <p className="text-xs sm:text-sm theme-muted font-medium">{kpi.label}</p>
+                  <p className="text-xl sm:text-2xl font-bold theme-title mt-1">{kpi.value}</p>
                 </div>
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-white/5 flex items-center justify-center">
                   <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
@@ -200,13 +200,13 @@ function RiskDistributionChart({ data }: { data: SupplierRiskEntry[] }) {
   const total = counts.low + counts.medium + counts.high;
 
   return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
-      <h3 className="text-sm font-bold text-white mb-4">Risk Distribution</h3>
+    <div className="relative z-1 theme-card rounded-xl p-4 sm:p-5">
+      <h3 className="text-sm font-bold theme-title mb-4">Risk Distribution</h3>
       <div className="h-[200px]">
         {total > 0 ? (
           <Chart type="pie" data={chartData} options={options as never} />
         ) : (
-          <div className="h-full flex items-center justify-center text-slate-500 text-sm">
+          <div className="h-full flex items-center justify-center theme-muted text-sm">
             No vendor data available
           </div>
         )}
@@ -239,21 +239,21 @@ function VendorRankingTable({
   const sorted = [...data].sort((a, b) => b.risk.overallRiskScore - a.risk.overallRiskScore);
 
   return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-blue-900/40">
-        <h3 className="text-sm font-bold text-white">Vendor Risk Ranking</h3>
-        <p className="text-xs text-slate-500 mt-0.5">Click to view vendor details</p>
+    <div className="relative z-1 theme-card rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-themed">
+        <h3 className="text-sm font-bold theme-title">Vendor Risk Ranking</h3>
+        <p className="text-xs theme-muted mt-0.5">Click to view vendor details</p>
       </div>
 
       {/* Desktop */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-navy-800 border-b border-blue-900/30">
+          <thead className="sticky top-0 z-10 theme-panel border-b border-themed">
             <tr>
-              <th className="px-4 py-3 text-left text-slate-500 font-medium">Vendor</th>
-              <th className="px-4 py-3 text-center text-slate-500 font-medium">Risk Score</th>
-              <th className="px-4 py-3 text-center text-slate-500 font-medium">Risk Level</th>
-              <th className="px-4 py-3 text-left text-slate-500 font-medium">Main Risk Category</th>
+              <th className="px-4 py-3 text-left theme-muted font-medium">Vendor</th>
+              <th className="px-4 py-3 text-center theme-muted font-medium">Risk Score</th>
+              <th className="px-4 py-3 text-center theme-muted font-medium">Risk Level</th>
+              <th className="px-4 py-3 text-left theme-muted font-medium">Main Risk Category</th>
             </tr>
           </thead>
           <tbody>
@@ -264,13 +264,13 @@ function VendorRankingTable({
                 <tr
                   key={risk.vendorId}
                   onClick={() => onSelect(risk.vendorId)}
-                  className={`border-b border-blue-900/20 cursor-pointer transition-colors ${
+                  className={`border-b border-themed/50 cursor-pointer transition-colors ${
                     isSelected ? 'bg-blue-600/20' : 'hover:bg-white/[0.02]'
                   }`}
                 >
                   <td className="px-4 py-3">
-                    <span className="text-white font-medium">{metrics.vendorName}</span>
-                    <p className="text-xs text-slate-500">{metrics.vendor.category}</p>
+                    <span className="theme-title font-medium">{metrics.vendorName}</span>
+                    <p className="text-xs theme-muted">{metrics.vendor.category}</p>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">
@@ -287,7 +287,7 @@ function VendorRankingTable({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-xs text-slate-400">{getMainRiskCategory(risk)}</span>
+                    <span className="text-xs theme-muted">{getMainRiskCategory(risk)}</span>
                   </td>
                 </tr>
               );
@@ -297,7 +297,7 @@ function VendorRankingTable({
       </div>
 
       {/* Mobile */}
-      <div className="block md:hidden divide-y divide-blue-900/20">
+      <div className="block md:hidden divide-y divide-themed/50">
         {sorted.map(({ metrics, risk }) => {
           const cfg = riskConfig(risk.riskLevel);
           const isSelected = selectedVendorId === risk.vendorId;
@@ -308,7 +308,7 @@ function VendorRankingTable({
               className={`px-4 py-4 cursor-pointer ${isSelected ? 'bg-blue-600/20' : 'hover:bg-white/[0.02]'}`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-white font-medium text-sm">{metrics.vendorName}</span>
+                <span className="theme-title font-medium text-sm">{metrics.vendorName}</span>
                 <div className="flex items-center gap-2">
                   <span className={`text-lg font-bold ${cfg.text}`}>{risk.overallRiskScore}</span>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${cfg.badge}`}>
@@ -316,7 +316,7 @@ function VendorRankingTable({
                   </span>
                 </div>
               </div>
-              <p className="text-xs text-slate-500 mt-1">{getMainRiskCategory(risk)}</p>
+              <p className="text-xs theme-muted mt-1">{getMainRiskCategory(risk)}</p>
             </div>
           );
         })}
@@ -380,13 +380,13 @@ function DeliveryTrendChart({ pos, perfMap }: { pos: PurchaseOrder[]; perfMap: R
   };
 
   return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
-      <h3 className="text-sm font-bold text-white mb-4">Delivery Performance Trend</h3>
+    <div className="relative z-1 theme-card rounded-xl p-4 sm:p-5">
+      <h3 className="text-sm font-bold theme-title mb-4">Delivery Performance Trend</h3>
       <div className="h-[200px]">
         {months.length > 0 ? (
           <Chart type="line" data={chartData} options={options as never} />
         ) : (
-          <div className="h-full flex items-center justify-center text-slate-500 text-sm">
+          <div className="h-full flex items-center justify-center theme-muted text-sm">
             No delivery data available
           </div>
         )}
@@ -398,9 +398,9 @@ function DeliveryTrendChart({ pos, perfMap }: { pos: PurchaseOrder[]; perfMap: R
 function RiskBreakdownChart({ data }: { data: SupplierRiskEntry[] }) {
   if (data.length === 0) {
     return (
-      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
-        <h3 className="text-sm font-bold text-white mb-4">Risk Breakdown</h3>
-        <div className="h-[200px] flex items-center justify-center text-slate-500 text-sm">
+      <div className="relative z-1 theme-card rounded-xl p-4 sm:p-5">
+        <h3 className="text-sm font-bold theme-title mb-4">Risk Breakdown</h3>
+        <div className="h-[200px] flex items-center justify-center theme-muted text-sm">
           No data available
         </div>
       </div>
@@ -453,8 +453,8 @@ function RiskBreakdownChart({ data }: { data: SupplierRiskEntry[] }) {
   };
 
   return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
-      <h3 className="text-sm font-bold text-white mb-4">Risk Breakdown</h3>
+    <div className="relative z-1 theme-card rounded-xl p-4 sm:p-5">
+      <h3 className="text-sm font-bold theme-title mb-4">Risk Breakdown</h3>
       <div className="h-[200px]">
         <Chart type="bar" data={chartData} options={options as never} />
       </div>
@@ -471,9 +471,9 @@ function VendorDetailPanel({
 }) {
   if (!entry) {
     return (
-      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-6 text-center">
-        <ShieldAlert className="w-10 h-10 mx-auto mb-3 text-slate-600" />
-        <p className="text-slate-500 text-sm">Select a vendor to view details</p>
+      <div className="relative z-1 theme-card rounded-xl p-6 text-center">
+        <ShieldAlert className="w-10 h-10 mx-auto mb-3 theme-muted opacity-50" />
+        <p className="theme-muted text-sm">Select a vendor to view details</p>
       </div>
     );
   }
@@ -483,13 +483,13 @@ function VendorDetailPanel({
   const RiskIcon = cfg.icon;
 
   return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl overflow-hidden">
+    <div className="relative z-1 theme-card rounded-xl overflow-hidden">
       {/* Header */}
       <div className={`${cfg.bg} px-5 py-4 border-b border-current/30`}>
         <div className="flex items-start justify-between">
           <div className="min-w-0 flex-1">
-            <h3 className="text-white font-bold text-lg truncate">{metrics.vendorName}</h3>
-            <p className="text-xs text-slate-400 mt-0.5">{metrics.vendor.category}</p>
+            <h3 className="theme-title font-bold text-lg truncate">{metrics.vendorName}</h3>
+            <p className="text-xs theme-muted mt-0.5">{metrics.vendor.category}</p>
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-4">
             <div className="flex items-center gap-1">
@@ -506,30 +506,30 @@ function VendorDetailPanel({
 
       {/* Metrics Grid */}
       <div className="p-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Status</p>
-          <p className={`text-sm font-semibold ${metrics.vendor.status === 'active' ? 'text-emerald-400' : 'text-slate-400'}`}>
+        <div className="bg-surface-strong rounded-lg p-3">
+          <p className="text-[10px] theme-muted uppercase tracking-wide">Status</p>
+          <p className={`text-sm font-semibold ${metrics.vendor.status === 'active' ? 'text-emerald-400' : 'theme-muted'}`}>
             {metrics.vendor.status}
           </p>
         </div>
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Lead Time</p>
-          <p className="text-sm font-semibold text-white">{metrics.vendorLeadTime} days</p>
+        <div className="bg-surface-strong rounded-lg p-3">
+          <p className="text-[10px] theme-muted uppercase tracking-wide">Lead Time</p>
+          <p className="text-sm font-semibold theme-title">{metrics.vendorLeadTime} days</p>
         </div>
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Total Orders</p>
-          <p className="text-sm font-semibold text-white">{metrics.totalOrders}</p>
+        <div className="bg-surface-strong rounded-lg p-3">
+          <p className="text-[10px] theme-muted uppercase tracking-wide">Total Orders</p>
+          <p className="text-sm font-semibold theme-title">{metrics.totalOrders}</p>
         </div>
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Total Spend</p>
-          <p className="text-sm font-semibold text-white">${metrics.supplierSpend.toLocaleString()}</p>
+        <div className="bg-surface-strong rounded-lg p-3">
+          <p className="text-[10px] theme-muted uppercase tracking-wide">Total Spend</p>
+          <p className="text-sm font-semibold theme-title">${metrics.supplierSpend.toLocaleString()}</p>
         </div>
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Spend Share</p>
-          <p className="text-sm font-semibold text-white">{metrics.supplierSpendShare}%</p>
+        <div className="bg-surface-strong rounded-lg p-3">
+          <p className="text-[10px] theme-muted uppercase tracking-wide">Spend Share</p>
+          <p className="text-sm font-semibold theme-title">{metrics.supplierSpendShare}%</p>
         </div>
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">On-Time Rate</p>
+        <div className="bg-surface-strong rounded-lg p-3">
+          <p className="text-[10px] theme-muted uppercase tracking-wide">On-Time Rate</p>
           <p className={`text-sm font-semibold ${metrics.onTimeDeliveryRate >= 90 ? 'text-emerald-400' : metrics.onTimeDeliveryRate >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
             {metrics.onTimeDeliveryRate}%
           </p>
@@ -539,7 +539,7 @@ function VendorDetailPanel({
       {/* Detected Risks */}
       {risk.detectedRiskTypes.length > 0 && (
         <div className="px-5 pb-4">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-2">Detected Risks</p>
+          <p className="text-[10px] theme-muted uppercase tracking-wide mb-2">Detected Risks</p>
           <div className="flex flex-wrap gap-1.5">
             {risk.detectedRiskTypes.map((t) => {
               const colorMap: Record<string, string> = {
@@ -562,7 +562,7 @@ function VendorDetailPanel({
 
       {/* Risk Score Breakdown */}
       <div className="px-5 pb-5 space-y-3">
-        <p className="text-[10px] text-slate-500 uppercase tracking-wide">Risk Score Breakdown</p>
+        <p className="text-[10px] theme-muted uppercase tracking-wide">Risk Score Breakdown</p>
         {[
           { label: 'Delivery Delay', score: risk.deliveryDelayRiskScore, max: 30 },
           { label: 'Lead Time', score: risk.leadTimeRiskScore, max: 20 },
@@ -572,10 +572,10 @@ function VendorDetailPanel({
         ].map((rb) => (
           <div key={rb.label}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-slate-400">{rb.label}</span>
-              <span className="text-xs font-bold text-white">{rb.score}/{rb.max}</span>
+              <span className="text-xs theme-muted">{rb.label}</span>
+              <span className="text-xs font-bold theme-title">{rb.score}/{rb.max}</span>
             </div>
-            <div className="w-full h-1.5 bg-navy-700 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-surface-strong rounded-full overflow-hidden">
               <div
                 className={`h-full ${cfg.bar} rounded-full transition-all duration-700`}
                 style={{ width: `${(rb.score / rb.max) * 100}%` }}
@@ -620,11 +620,11 @@ export default function Scorecard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-2xl font-bold theme-title flex items-center gap-2">
           <ShieldAlert className="w-7 h-7 text-blue-400" />
           Vendor Risk Scorecard
         </h1>
-        <p className="text-slate-400 text-sm mt-1">
+        <p className="theme-muted text-sm mt-1">
           Monitor supplier risk levels and performance metrics
         </p>
       </div>
@@ -653,10 +653,10 @@ export default function Scorecard() {
 
       {/* Empty state */}
       {riskData.length === 0 && (
-        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-10 text-center">
-          <Package className="w-12 h-12 mx-auto mb-3 text-slate-600" />
-          <p className="text-slate-500 text-sm">No vendor risk data available yet.</p>
-          <p className="text-slate-600 text-xs mt-2">Add purchase orders to generate risk analytics.</p>
+        <div className="relative z-1 theme-card rounded-xl p-10 text-center">
+          <Package className="w-12 h-12 mx-auto mb-3 theme-muted opacity-30" />
+          <p className="theme-muted text-sm">No vendor risk data available yet.</p>
+          <p className="theme-muted text-xs mt-2">Add purchase orders to generate risk analytics.</p>
         </div>
       )}
     </div>

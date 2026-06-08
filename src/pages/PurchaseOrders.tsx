@@ -475,7 +475,7 @@ export default function PurchaseOrders() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold theme-title flex items-center gap-2">
             <FileText className="w-7 h-7 text-blue-400" />
             Purchase Orders
           </h1>
@@ -499,23 +499,23 @@ export default function PurchaseOrders() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted" />
             <input
               type="text"
               placeholder="Search POs..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-navy-800 border border-blue-900/40 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+              className="w-full pl-10 pr-4 py-2 bg-surface border border-themed rounded-lg theme-text placeholder-muted text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
             />
           </div>
 
           {/* Status filter */}
           <div className="relative flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-500 flex-shrink-0" />
+            <Filter className="w-4 h-4 theme-muted flex-shrink-0" />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="bg-navy-700 border border-blue-900/40 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-8"
+              className="theme-select border border-themed rounded-lg px-3 py-2 theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-8"
             >
               <option value="all">All Statuses</option>
               <option value="ordered">Ordered</option>
@@ -524,7 +524,7 @@ export default function PurchaseOrders() {
               <option value="delivered">Delivered</option>
               <option value="invoiced">Invoiced</option>
             </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted pointer-events-none" />
           </div>
 
           {/* Vendor filter */}
@@ -532,7 +532,7 @@ export default function PurchaseOrders() {
             <select
               value={filterVendor}
               onChange={(e) => setFilterVendor(e.target.value)}
-              className="bg-navy-700 border border-blue-900/40 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-8"
+              className="theme-select border border-themed rounded-lg px-3 py-2 theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-8"
             >
               <option value="all">All Vendors</option>
               {vendors.map((v) => (
@@ -541,7 +541,7 @@ export default function PurchaseOrders() {
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted pointer-events-none" />
           </div>
 
           {/* Sort */}
@@ -549,26 +549,26 @@ export default function PurchaseOrders() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-navy-700 border border-blue-900/40 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-8"
+              className="theme-select border border-themed rounded-lg px-3 py-2 theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-8"
             >
               <option value="date-desc">Date: Newest</option>
               <option value="date-asc">Date: Oldest</option>
               <option value="total-desc">Total: High-Low</option>
               <option value="status">Status</option>
             </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted pointer-events-none" />
           </div>
         </div>
 
         {/* Summary stat bar */}
-        <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-navy-800 border border-blue-900/40 rounded-lg">
+        <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-surface border border-themed rounded-lg">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-400">
-              Showing <span className="text-white font-semibold">{filtered.length}</span> PO{filtered.length !== 1 ? 's' : ''}
+            <span className="text-sm theme-muted">
+              Showing <span className="theme-title font-semibold">{filtered.length}</span> PO{filtered.length !== 1 ? 's' : ''}
             </span>
-            <span className="text-slate-600">|</span>
-            <span className="text-sm text-slate-400">
-              Total Value: <span className="text-white font-semibold">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            <span className="theme-muted">|</span>
+            <span className="text-sm theme-muted">
+              Total Value: <span className="theme-title font-semibold">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </span>
           </div>
           {selectedIds.size > 0 && (
@@ -587,15 +587,15 @@ export default function PurchaseOrders() {
       {showForm && (
         <div className="fixed inset-0 z-[200] flex items-start justify-center p-4 pt-[5vh]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeForm} />
-          <div className="relative z-10 bg-navy-800 border border-blue-900/40 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
+          <div className="relative z-10 theme-modal rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
             {/* Modal header */}
-            <div className="sticky top-0 bg-navy-800 px-6 py-4 border-b border-blue-900/40 flex items-center justify-between z-20">
-              <h2 className="text-lg font-bold text-white">
+            <div className="sticky top-0 theme-modal px-6 py-4 border-b border-themed flex items-center justify-between z-20">
+              <h2 className="text-lg font-bold theme-title">
                 {editingPO ? `Edit Purchase Order (Editing ${editingPO.poNumber})` : 'Create New Purchase Order'}
               </h2>
               <button
                 onClick={closeForm}
-                className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
+                className="p-2 rounded-lg hover:bg-white/5 theme-muted hover:theme-title transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -605,8 +605,8 @@ export default function PurchaseOrders() {
               {/* Vendor & Date row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1.5">
-                    Vendor <span className="text-red-400">*</span>
+                  <label className="block text-sm theme-muted mb-1.5">
+                    Vendor <span className="text-danger">*</span>
                   </label>
                   <div className="relative">
                     <select
@@ -615,7 +615,7 @@ export default function PurchaseOrders() {
                         setForm({ ...form, vendorId: e.target.value });
                         if (e.target.value) clearError('vendor');
                       }}
-                      className={`w-full bg-navy-700 border rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10 ${validationErrors.vendor ? 'border-red-500' : 'border-blue-900/40'}`}
+                      className={`w-full theme-select border rounded-lg px-4 py-2.5 theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10 ${validationErrors.vendor ? 'border-red-500' : 'border-themed'}`}
                     >
                       <option value="">Select vendor...</option>
                       {vendors.map((v) => (
@@ -624,13 +624,13 @@ export default function PurchaseOrders() {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted pointer-events-none" />
                   </div>
-                  {validationErrors.vendor && <p className="text-red-400 text-xs mt-1">{validationErrors.vendor}</p>}
+                  {validationErrors.vendor && <p className="text-danger text-xs mt-1">{validationErrors.vendor}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1.5">
-                    Expected Delivery Date <span className="text-red-400">*</span>
+                  <label className="block text-sm theme-muted mb-1.5">
+                    Expected Delivery Date <span className="text-danger">*</span>
                   </label>
                   <input
                     type="date"
@@ -641,34 +641,34 @@ export default function PurchaseOrders() {
                       const today = new Date().toISOString().split('T')[0];
                       if (e.target.value && e.target.value >= today) clearError('deliveryDate');
                     }}
-                    className={`w-full px-4 py-2.5 bg-navy-700 border rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${validationErrors.deliveryDate ? 'border-red-500' : 'border-blue-900/40'}`}
+                    className={`w-full px-4 py-2.5 theme-input border rounded-lg theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${validationErrors.deliveryDate ? 'border-red-500' : 'border-themed'}`}
                   />
-                  {validationErrors.deliveryDate && <p className="text-red-400 text-xs mt-1">{validationErrors.deliveryDate}</p>}
+                  {validationErrors.deliveryDate && <p className="text-danger text-xs mt-1">{validationErrors.deliveryDate}</p>}
                 </div>
               </div>
 
               {/* PO Number (read-only, auto-generated) */}
               <div>
-                <label className="block text-sm text-slate-400 mb-1.5">PO Number</label>
-                <div className="px-4 py-2.5 bg-navy-700/50 border border-blue-900/30 rounded-lg text-blue-400 font-mono text-sm select-all">
+                <label className="block text-sm theme-muted mb-1.5">PO Number</label>
+                <div className="px-4 py-2.5 bg-surface-strong border border-themed rounded-lg text-accent font-mono text-sm select-all">
                   {editingPO ? editingPO.poNumber : pendingPONumber || '—'}
                 </div>
               </div>
 
               {/* Line Items Table */}
               <div>
-                <h3 className="text-sm font-semibold text-white mb-3">Line Items</h3>
+                <h3 className="text-sm font-semibold theme-title mb-3">Line Items</h3>
                 {validationErrors.lineItems && (
-                  <p className="text-red-400 text-xs mb-2">{validationErrors.lineItems}</p>
+                  <p className="text-danger text-xs mb-2">{validationErrors.lineItems}</p>
                 )}
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-blue-900/40">
-                        <th className="px-3 py-2 text-left text-slate-400 font-medium">Item Name</th>
-                        <th className="px-3 py-2 text-right text-slate-400 font-medium w-24">Quantity</th>
-                        <th className="px-3 py-2 text-right text-slate-400 font-medium w-32">Unit Price</th>
-                        <th className="px-3 py-2 text-right text-slate-400 font-medium w-28">Line Total</th>
+                      <tr className="border-b border-themed">
+                        <th className="px-3 py-2 text-left theme-muted font-medium">Item Name</th>
+                        <th className="px-3 py-2 text-right theme-muted font-medium w-24">Quantity</th>
+                        <th className="px-3 py-2 text-right theme-muted font-medium w-32">Unit Price</th>
+                        <th className="px-3 py-2 text-right theme-muted font-medium w-28">Line Total</th>
                         <th className="px-3 py-2 w-12" />
                       </tr>
                     </thead>
@@ -678,7 +678,7 @@ export default function PurchaseOrders() {
                         const qtyErr = validationErrors[`${item.id}-qty`];
                         const priceErr = validationErrors[`${item.id}-price`];
                         return (
-                          <tr key={item.id} className="border-b border-blue-900/20">
+                          <tr key={item.id} className="border-b border-themed/50">
                             <td className="px-3 py-2 relative">
                               <input
                                 ref={(el) => setInputRef(item.id, 'name', el)}
@@ -709,9 +709,9 @@ export default function PurchaseOrders() {
                                   handleLineItemKeyDown(e, item.id, 'name', index);
                                 }}
                                 placeholder="Item name"
-                                className={`w-full px-2 py-1.5 bg-navy-700 border rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${nameErr ? 'border-red-500' : 'border-blue-900/40'}`}
+                                className={`w-full px-2 py-1.5 theme-input border rounded theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${nameErr ? 'border-red-500' : 'border-themed'}`}
                               />
-                              {nameErr && <p className="text-red-400 text-[10px] mt-0.5">{nameErr}</p>}
+                              {nameErr && <p className="text-danger text-[10px] mt-0.5">{nameErr}</p>}
                               {autocompleteOpen === item.id && (() => {
                                 const query = item.name.trim().toLowerCase();
                                 if (!query) return null;
@@ -720,7 +720,7 @@ export default function PurchaseOrders() {
                                   .slice(0, 6);
                                 if (matches.length === 0) return null;
                                 return (
-                                  <div className="absolute left-3 top-full mt-1 w-56 bg-navy-800 border border-blue-900/40 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                                  <div className="absolute left-3 top-full mt-1 w-56 theme-card border border-themed rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
                                     {matches.map((c) => (
                                       <button
                                         key={c.name}
@@ -738,7 +738,7 @@ export default function PurchaseOrders() {
                                           setAutocompleteOpen(null);
                                           focusInput(item.id, 'quantity');
                                         }}
-                                        className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-white/5 cursor-pointer"
+                                        className="w-full text-left px-3 py-2 text-sm theme-muted hover:bg-white/5 cursor-pointer"
                                       >
                                         {c.name}
                                       </button>
@@ -756,9 +756,9 @@ export default function PurchaseOrders() {
                                 onKeyDown={(e) => handleLineItemKeyDown(e, item.id, 'quantity', index)}
                                 placeholder="1"
                                 min="1"
-                                className={`w-full px-2 py-1.5 bg-navy-700 border rounded text-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${qtyErr ? 'border-red-500' : 'border-blue-900/40'}`}
+                                className={`w-full px-2 py-1.5 theme-input border rounded theme-text text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${qtyErr ? 'border-red-500' : 'border-themed'}`}
                               />
-                              {qtyErr && <p className="text-red-400 text-[10px] mt-0.5">{qtyErr}</p>}
+                              {qtyErr && <p className="text-danger text-[10px] mt-0.5">{qtyErr}</p>}
                             </td>
                             <td className="px-3 py-2">
                               <input
@@ -770,11 +770,11 @@ export default function PurchaseOrders() {
                                 placeholder="0.00"
                                 min="0"
                                 step="0.01"
-                                className={`w-full px-2 py-1.5 bg-navy-700 border rounded text-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${priceErr ? 'border-red-500' : 'border-blue-900/40'}`}
+                                className={`w-full px-2 py-1.5 theme-input border rounded theme-text text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${priceErr ? 'border-red-500' : 'border-themed'}`}
                               />
-                              {priceErr && <p className="text-red-400 text-[10px] mt-0.5">{priceErr}</p>}
+                              {priceErr && <p className="text-danger text-[10px] mt-0.5">{priceErr}</p>}
                             </td>
-                            <td className="px-3 py-2 text-right text-slate-300 font-medium whitespace-nowrap">
+                            <td className="px-3 py-2 text-right theme-muted font-medium whitespace-nowrap">
                               ${formatMoney(calcLineTotal(item))}
                             </td>
                             <td className="px-3 py-2 text-center">
@@ -798,46 +798,46 @@ export default function PurchaseOrders() {
                   <button
                     id="add-line-item-btn"
                     onClick={addLineItem}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-navy-700 hover:bg-navy-600 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-blue-900/40 border-dashed"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-surface-strong hover:bg-surface theme-muted text-sm font-medium rounded-lg transition-colors border border-themed border-dashed"
                   >
                     <Plus className="w-4 h-4" />
                     Add Item
                   </button>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs theme-muted">
                     Total Items: {form.lineItems.filter((i) => i.name.trim()).length}
                   </span>
                 </div>
               </div>
 
               {/* Totals */}
-              <div className="bg-navy-700/50 border border-blue-900/30 rounded-xl p-4 space-y-2">
+              <div className="bg-surface-strong border border-themed rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Subtotal</span>
-                  <span className="text-white font-medium">${formatMoney(subtotal)}</span>
+                  <span className="theme-muted">Subtotal</span>
+                  <span className="theme-title font-medium">${formatMoney(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Tax (10%)</span>
-                  <span className="text-white font-medium">${formatMoney(tax)}</span>
+                  <span className="theme-muted">Tax (10%)</span>
+                  <span className="theme-title font-medium">${formatMoney(tax)}</span>
                 </div>
-                <div className="flex justify-between text-base border-t border-blue-900/40 pt-2">
-                  <span className="text-white font-semibold">Grand Total</span>
-                  <span className="text-blue-400 font-bold">${formatMoney(grandTotal)}</span>
+                <div className="flex justify-between text-base border-t border-themed pt-2">
+                  <span className="theme-title font-semibold">Grand Total</span>
+                  <span className="text-accent font-bold">${formatMoney(grandTotal)}</span>
                 </div>
               </div>
             </div>
 
             {/* Modal footer */}
-            <div className="sticky bottom-0 bg-navy-800 px-6 py-4 border-t border-blue-900/40 flex justify-end gap-3 z-20">
+            <div className="sticky bottom-0 theme-modal px-6 py-4 border-t border-themed flex justify-end gap-3 z-20">
               <button
                 onClick={closeForm}
-                className="px-5 py-2.5 bg-navy-700 hover:bg-navy-600 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-blue-900/40"
+                className="px-5 py-2.5 bg-surface-strong hover:bg-surface theme-muted text-sm font-medium rounded-lg transition-colors border border-themed"
               >
                 {editingPO ? 'Cancel Edit' : 'Cancel'}
               </button>
               <button
                 onClick={handleSave}
                 disabled={isSaving || !form.vendorId || form.lineItems.length === 0 || form.lineItems.every((i) => !i.name.trim())}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 theme-title text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isSaving ? 'Saving...' : editingPO ? 'Save Changes' : 'Save Purchase Order'}
               </button>
@@ -853,7 +853,7 @@ export default function PurchaseOrders() {
 
           <div className="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl print-modal">
             {/* Action bar — hidden during print */}
-            <div className="print-actions sticky top-0 bg-navy-800 border-b border-blue-900/40 px-6 py-3 flex items-center justify-between z-20">
+            <div className="print-actions sticky top-0 theme-modal border-b border-themed px-6 py-3 flex items-center justify-between z-20">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => {
@@ -863,7 +863,7 @@ export default function PurchaseOrders() {
                     }, { once: true });
                     window.print();
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 theme-title text-sm font-medium rounded-lg transition-colors"
                 >
                   <Printer className="w-4 h-4" />
                   Print
@@ -874,7 +874,7 @@ export default function PurchaseOrders() {
                     setViewingPO(null);
                     setEditingPO(po);
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-navy-700 hover:bg-navy-600 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-blue-900/40"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-surface-strong hover:bg-surface theme-muted text-sm font-medium rounded-lg transition-colors border border-themed"
                 >
                   <Edit2 className="w-4 h-4" />
                   Edit
@@ -882,7 +882,7 @@ export default function PurchaseOrders() {
               </div>
               <button
                 onClick={() => setViewingPO(null)}
-                className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
+                className="p-2 rounded-lg hover:bg-white/5 theme-muted hover:theme-title transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1005,26 +1005,26 @@ export default function PurchaseOrders() {
       {deletingPO && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeletingPO(null)} />
-          <div className="relative z-10 bg-navy-800 border border-blue-900/40 rounded-2xl w-full max-w-md shadow-2xl">
+          <div className="relative z-10 theme-modal rounded-2xl w-full max-w-md shadow-2xl">
             <div className="p-6">
-              <div className="flex items-center justify-center w-14 h-14 mx-auto mb-4 rounded-full bg-red-500/10">
-                <AlertTriangle className="w-7 h-7 text-red-400" />
+              <div className="flex items-center justify-center w-14 h-14 mx-auto mb-4 rounded-full bg-danger-light">
+                <AlertTriangle className="w-7 h-7 text-danger" />
               </div>
-              <h2 className="text-lg font-bold text-white text-center mb-2">Delete Purchase Order</h2>
-              <p className="text-slate-400 text-sm text-center mb-4">
+              <h2 className="text-lg font-bold theme-title text-center mb-2">Delete Purchase Order</h2>
+              <p className="theme-muted text-sm text-center mb-4">
                 Are you sure you want to delete{' '}
-                <span className="text-white font-medium">{deletingPO.poNumber}</span>?
+                <span className="theme-title font-medium">{deletingPO.poNumber}</span>?
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setDeletingPO(null)}
-                  className="flex-1 px-4 py-2.5 bg-navy-700 hover:bg-navy-600 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-blue-900/40"
+                  className="flex-1 px-4 py-2.5 bg-surface-strong hover:bg-surface theme-muted text-sm font-medium rounded-lg transition-colors border border-themed"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-500 theme-title text-sm font-medium rounded-lg transition-colors"
                 >
                   Delete
                 </button>
@@ -1038,26 +1038,26 @@ export default function PurchaseOrders() {
       {showBulkDeleteConfirm && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowBulkDeleteConfirm(false)} />
-          <div className="relative z-10 bg-navy-800 border border-blue-900/40 rounded-2xl w-full max-w-md shadow-2xl">
+          <div className="relative z-10 theme-modal rounded-2xl w-full max-w-md shadow-2xl">
             <div className="p-6">
-              <div className="flex items-center justify-center w-14 h-14 mx-auto mb-4 rounded-full bg-red-500/10">
-                <AlertTriangle className="w-7 h-7 text-red-400" />
+              <div className="flex items-center justify-center w-14 h-14 mx-auto mb-4 rounded-full bg-danger-light">
+                <AlertTriangle className="w-7 h-7 text-danger" />
               </div>
-              <h2 className="text-lg font-bold text-white text-center mb-2">Delete Selected POs</h2>
-              <p className="text-slate-400 text-sm text-center mb-4">
+              <h2 className="text-lg font-bold theme-title text-center mb-2">Delete Selected POs</h2>
+              <p className="theme-muted text-sm text-center mb-4">
                 Are you sure you want to delete{' '}
-                <span className="text-white font-medium">{selectedIds.size}</span> purchase order{selectedIds.size !== 1 ? 's' : ''}?
+                <span className="theme-title font-medium">{selectedIds.size}</span> purchase order{selectedIds.size !== 1 ? 's' : ''}?
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowBulkDeleteConfirm(false)}
-                  className="flex-1 px-4 py-2.5 bg-navy-700 hover:bg-navy-600 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-blue-900/40"
+                  className="flex-1 px-4 py-2.5 bg-surface-strong hover:bg-surface theme-muted text-sm font-medium rounded-lg transition-colors border border-themed"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmBulkDelete}
-                  className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-500 theme-title text-sm font-medium rounded-lg transition-colors"
                 >
                   Delete All
                 </button>
@@ -1068,12 +1068,12 @@ export default function PurchaseOrders() {
       )}
 
       {/* ── LIST SECTION ──────────────────────────────────────── */}
-      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl overflow-hidden">
+      <div className="relative z-1 theme-card rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-blue-900/40 bg-navy-700/50">
-                <th className="px-4 py-3 text-left text-slate-400 font-medium w-12">
+              <tr className="border-b border-themed bg-surface-strong">
+                <th className="px-4 py-3 text-left theme-muted font-medium w-12">
                   <button
                     onClick={toggleSelectAll}
                     className="p-1 rounded hover:bg-white/5 transition-colors"
@@ -1086,18 +1086,18 @@ export default function PurchaseOrders() {
                     )}
                   </button>
                 </th>
-                <th className="px-4 py-3 text-left text-slate-400 font-medium">PO Number</th>
-                <th className="px-4 py-3 text-left text-slate-400 font-medium">Vendor</th>
-                <th className="px-4 py-3 text-left text-slate-400 font-medium hidden md:table-cell">Date Created</th>
-                <th className="px-4 py-3 text-left text-slate-400 font-medium hidden lg:table-cell">Items</th>
-                <th className="px-4 py-3 text-right text-slate-400 font-medium">Total</th>
-                <th className="px-4 py-3 text-left text-slate-400 font-medium">Status</th>
-                <th className="px-4 py-3 text-left text-slate-400 font-medium">Actions</th>
+                <th className="px-4 py-3 text-left theme-muted font-medium">PO Number</th>
+                <th className="px-4 py-3 text-left theme-muted font-medium">Vendor</th>
+                <th className="px-4 py-3 text-left theme-muted font-medium hidden md:table-cell">Date Created</th>
+                <th className="px-4 py-3 text-left theme-muted font-medium hidden lg:table-cell">Items</th>
+                <th className="px-4 py-3 text-right theme-muted font-medium">Total</th>
+                <th className="px-4 py-3 text-left theme-muted font-medium">Status</th>
+                <th className="px-4 py-3 text-left theme-muted font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((po) => (
-                <tr key={po.id} className={`border-b border-blue-900/20 hover:bg-white/[0.02] ${selectedIds.has(po.id) ? 'bg-blue-500/5' : ''}`}>
+                <tr key={po.id} className={`border-b border-themed/50 hover:bg-white/[0.02] ${selectedIds.has(po.id) ? 'bg-blue-500/5' : ''}`}>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => toggleSelect(po.id)}
@@ -1106,17 +1106,17 @@ export default function PurchaseOrders() {
                       {selectedIds.has(po.id) ? (
                         <CheckSquare className="w-4 h-4 text-blue-400" />
                       ) : (
-                        <Square className="w-4 h-4 text-slate-500" />
+                        <Square className="w-4 h-4 theme-muted" />
                       )}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-white font-mono text-xs">{po.poNumber}</td>
-                  <td className="px-4 py-3 text-slate-300">{po.vendorName}</td>
-                  <td className="px-4 py-3 text-slate-400 hidden md:table-cell">{po.date}</td>
-                  <td className="px-4 py-3 text-slate-400 text-xs hidden lg:table-cell max-w-xs truncate">
+                  <td className="px-4 py-3 theme-title font-mono text-xs">{po.poNumber}</td>
+                  <td className="px-4 py-3 theme-muted">{po.vendorName}</td>
+                  <td className="px-4 py-3 theme-muted hidden md:table-cell">{po.date}</td>
+                  <td className="px-4 py-3 theme-muted text-xs hidden lg:table-cell max-w-xs truncate">
                     {po.items}
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-300">
+                  <td className="px-4 py-3 text-right theme-muted">
                     ${po.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </td>
                   <td className="px-4 py-3">
@@ -1165,7 +1165,7 @@ export default function PurchaseOrders() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
+                  <td colSpan={8} className="px-4 py-12 text-center theme-muted">
                     <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p>No purchase orders found</p>
                   </td>
@@ -1178,38 +1178,38 @@ export default function PurchaseOrders() {
 
       {/* ── STATS CARD ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-5 flex items-center gap-4">
+        <div className="relative z-1 theme-card rounded-xl p-5 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
             <Building2 className="w-6 h-6 text-blue-400" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Most Ordered Vendor</p>
-            <p className="text-lg font-bold text-white truncate">
+            <p className="text-xs theme-muted uppercase tracking-wider mb-0.5">Most Ordered Vendor</p>
+            <p className="text-lg font-bold theme-title truncate">
               {stats.mostOrderedVendor ? stats.mostOrderedVendor.name : 'N/A'}
             </p>
             {stats.mostOrderedVendor && (
-              <p className="text-xs text-slate-400">{stats.mostOrderedVendor.count} POs</p>
+              <p className="text-xs theme-muted">{stats.mostOrderedVendor.count} POs</p>
             )}
           </div>
         </div>
-        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-5 flex items-center gap-4">
+        <div className="relative z-1 theme-card rounded-xl p-5 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
             <DollarSign className="w-6 h-6 text-emerald-400" />
           </div>
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Average PO Value</p>
-            <p className="text-lg font-bold text-white">
+            <p className="text-xs theme-muted uppercase tracking-wider mb-0.5">Average PO Value</p>
+            <p className="text-lg font-bold theme-title">
               ${stats.avgPOValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
         </div>
-        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-5 flex items-center gap-4">
+        <div className="relative z-1 theme-card rounded-xl p-5 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
             <TrendingUp className="w-6 h-6 text-orange-400" />
           </div>
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">This Month Spend</p>
-            <p className="text-lg font-bold text-white">
+            <p className="text-xs theme-muted uppercase tracking-wider mb-0.5">This Month Spend</p>
+            <p className="text-lg font-bold theme-title">
               ${stats.thisMonthSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>

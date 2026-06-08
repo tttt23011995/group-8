@@ -160,8 +160,8 @@ function calcDeliveryPerformance(po: PurchaseOrder & { actualDeliveryDate?: stri
 function GanttTimeline({ pos }: { pos: PurchaseOrder[] }) {
   if (pos.length < 2) {
     return (
-      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-8 text-center">
-        <p className="text-slate-500 text-sm">Not enough data for timeline chart</p>
+      <div className="relative z-1 theme-card rounded-xl p-8 text-center">
+        <p className="theme-muted text-sm">Not enough data for timeline chart</p>
       </div>
     );
   }
@@ -288,7 +288,7 @@ function GanttTimeline({ pos }: { pos: PurchaseOrder[] }) {
   };
 
   return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-6">
+    <div className="relative z-1 theme-card rounded-xl p-4 sm:p-6">
       <div className="h-[280px] sm:h-[340px]">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <Chart type="bar" data={chartData as any} options={options as any} plugins={[todayLinePlugin]} />
@@ -316,15 +316,15 @@ function DeliveryNotesPanel({
   }
 
   return (
-    <div className="mt-4 pt-4 border-t border-blue-900/30">
+    <div className="mt-4 pt-4 border-t border-themed">
       <div className="space-y-2 mb-3">
         {notes.length === 0 ? (
-          <p className="text-xs text-slate-600 italic">No notes yet</p>
+          <p className="text-xs theme-muted italic">No notes yet</p>
         ) : (
           notes.map((note, i) => (
-            <div key={i} className="bg-navy-700/50 rounded-lg p-3">
-              <p className="text-[10px] text-slate-500 mb-1">{formatNoteTimestamp(note.timestamp)}</p>
-              <p className="text-sm text-slate-300">{note.text}</p>
+            <div key={i} className="bg-surface-strong rounded-lg p-3">
+              <p className="text-[10px] theme-muted mb-1">{formatNoteTimestamp(note.timestamp)}</p>
+              <p className="text-sm theme-muted">{note.text}</p>
             </div>
           ))
         )}
@@ -334,7 +334,7 @@ function DeliveryNotesPanel({
           value={noteText}
           onChange={(e) => setNoteText(e.target.value)}
           placeholder="Add a delivery note..."
-          className="flex-1 px-3 py-2 bg-navy-700 border border-blue-900/40 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none"
+          className="flex-1 px-3 py-2 theme-input border border-themed rounded-lg theme-text placeholder-muted text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none"
           rows={2}
         />
         <button
@@ -533,16 +533,16 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold theme-title flex items-center gap-2">
             <Package className="w-7 h-7 text-blue-400" />
             Delivery Tracking
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Track and manage incoming deliveries</p>
+          <p className="theme-muted text-sm mt-1">Track and manage incoming deliveries</p>
         </div>
-        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-16 text-center">
-          <Package className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-          <p className="text-slate-400 font-medium text-lg">No purchase orders yet</p>
-          <p className="text-slate-500 text-sm mt-2">Create one in the Orders page to start tracking deliveries</p>
+        <div className="relative z-1 theme-card rounded-xl p-16 text-center">
+          <Package className="w-16 h-16 mx-auto mb-4 theme-muted opacity-30" />
+          <p className="theme-text font-medium text-lg">No purchase orders yet</p>
+          <p className="theme-muted text-sm mt-2">Create one in the Orders page to start tracking deliveries</p>
           <button
             onClick={() => onNavigate?.('purchase-orders')}
             className="relative z-2 mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-blue-900/20"
@@ -558,11 +558,11 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-2xl font-bold theme-title flex items-center gap-2">
           <Package className="w-7 h-7 text-blue-400" />
           Delivery Tracking
         </h1>
-        <p className="text-slate-400 text-sm mt-1">Track and manage incoming deliveries</p>
+        <p className="theme-muted text-sm mt-1">Track and manage incoming deliveries</p>
       </div>
 
       {/* Summary Status Badges */}
@@ -590,18 +590,18 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
       {/* Search + Sort Controls */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted" />
           <input
             type="text"
             placeholder="Search by PO number or vendor name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 bg-navy-800 border border-blue-900/40 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+            className="w-full pl-10 pr-10 py-2.5 bg-surface border border-themed rounded-lg theme-text placeholder-muted text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 theme-muted hover:theme-title transition-colors"
             >
               <XIcon className="w-4 h-4" />
             </button>
@@ -611,17 +611,17 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="bg-navy-700 border border-blue-900/40 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-8"
+            className="theme-select border border-themed rounded-lg px-3 py-2.5 theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-8"
           >
             {(Object.keys(sortLabels) as SortOption[]).map((key) => (
               <option key={key} value={key}>{sortLabels[key]}</option>
             ))}
           </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted pointer-events-none" />
         </div>
       </div>
 
-      {/* Gantt Timeline Chart */}
+      {/* Gantt Timeline Chart - Already has theme styling in component */}
       <GanttTimeline pos={pos} />
 
       {/* Delivery Cards */}
@@ -814,9 +814,9 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
         })}
 
         {filtered.length === 0 && (
-          <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-16 text-center">
-            <Package className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-            <p className="text-slate-400 font-medium">
+          <div className="relative z-1 theme-card rounded-xl p-16 text-center">
+            <Package className="w-16 h-16 mx-auto mb-4 theme-muted opacity-30" />
+            <p className="theme-text font-medium">
               {search.trim() ? 'No deliveries match your search.' : 'No deliveries matching this filter'}
             </p>
             <button

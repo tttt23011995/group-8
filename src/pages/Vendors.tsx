@@ -53,16 +53,16 @@ const CATEGORIES = ['Electronics', 'Logistics', 'Raw Materials', 'Office Supplie
 const PAYMENT_TERMS = ['Net 30', 'Net 60', 'Net 90'] as const;
 
 const categoryColors: Record<string, string> = {
-  Electronics: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  Logistics: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  'Raw Materials': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  'Office Supplies': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  'IT Services': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  Electronics: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-500/30',
+  Logistics: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30',
+  'Raw Materials': 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-500/30',
+  'Office Supplies': 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-500/30',
+  'IT Services': 'bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-300 dark:border-orange-500/30',
 };
 
 const statusColors: Record<string, string> = {
-  active: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  inactive: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+  active: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30',
+  inactive: 'bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-500/30',
 };
 
 const categoryAvatarColors: Record<string, string> = {
@@ -309,16 +309,16 @@ export default function Vendors() {
     <div className="space-y-6">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Building2 className="w-7 h-7 text-blue-400" />
+          <h1 className="text-2xl font-bold theme-title flex items-center gap-2">
+            <Building2 className="w-7 h-7 text-blue-500" />
             Vendor Directory
           </h1>
-          <p className="text-slate-400 text-sm mt-1">{vendors.length} vendors registered</p>
+          <p className="theme-muted text-sm mt-1">{vendors.length} vendors registered</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={exportCSV}
-            className="relative z-2 flex items-center gap-1.5 px-4 py-2.5 bg-navy-700 hover:bg-navy-600 text-slate-300 text-sm font-semibold rounded-lg transition-colors border border-blue-900/40"
+            className="relative z-2 flex items-center gap-1.5 px-4 py-2.5 bg-surface hover:bg-surface-strong theme-text text-sm font-semibold rounded-lg transition-colors border border-themed"
           >
             <Download className="w-4 h-4" />
             Export CSV
@@ -329,7 +329,7 @@ export default function Vendors() {
               setForm(emptyForm);
               setShowAddModal(true);
             }}
-            className="relative z-2 flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+            className="relative z-2 flex items-center gap-1.5 px-4 py-2.5 bg-accent hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg"
           >
             <Plus className="w-4 h-4" />
             Add Vendor
@@ -340,43 +340,43 @@ export default function Vendors() {
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Filter Panel */}
         <div className="lg:w-56 flex-shrink-0">
-          <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-blue-400" />
+          <div className="relative z-1 theme-card p-4">
+            <h3 className="text-sm font-semibold theme-title mb-4 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-blue-500" />
               Filters
             </h3>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-slate-400 mb-2">Category</label>
+                <label className="block text-xs theme-muted mb-2">Category</label>
                 <div className="relative">
                   <select
                     value={filterCategory}
                     onChange={(e) => setFilterCategory(e.target.value)}
-                    className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
+                    className="w-full theme-select px-3 py-2.5 theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
                   >
                     <option value="all">All Categories</option>
                     {CATEGORIES.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted pointer-events-none" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-2">Status</label>
+                <label className="block text-xs theme-muted mb-2">Status</label>
                 <div className="relative">
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
+                    className="w-full theme-select px-3 py-2.5 theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
                   >
                     <option value="all">All Statuses</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted pointer-events-none" />
                 </div>
               </div>
 
@@ -386,7 +386,7 @@ export default function Vendors() {
                     setFilterCategory('all');
                     setFilterStatus('all');
                   }}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  className="text-xs text-accent hover:text-blue-400 transition-colors"
                 >
                   Clear filters
                 </button>
@@ -399,18 +399,18 @@ export default function Vendors() {
         <div className="flex-1 min-w-0">
           {/* Search Bar */}
           <div className="relative mb-4">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 theme-muted" />
             <input
               type="text"
               placeholder="Search vendors by name, category, location, or contact..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-12 py-3 bg-navy-800 border border-blue-900/40 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+              className="w-full pl-12 pr-12 py-3 theme-input rounded-xl theme-title placeholder-muted text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 theme-muted hover:theme-title transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -419,19 +419,19 @@ export default function Vendors() {
 
           {/* Vendor Count */}
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-slate-400">
-              Showing <span className="text-white font-medium">{filtered.length}</span> of <span className="text-white font-medium">{vendors.length}</span> vendors
+            <p className="text-sm theme-muted">
+              Showing <span className="theme-title font-medium">{filtered.length}</span> of <span className="theme-title font-medium">{vendors.length}</span> vendors
             </p>
           </div>
 
           {/* Vendor Grid */}
           {filtered.length === 0 ? (
-            <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-12 text-center">
-              <Building2 className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-              <p className="text-slate-400 font-medium">
+            <div className="relative z-1 theme-card p-12 text-center">
+              <Building2 className="w-16 h-16 mx-auto mb-4 theme-muted" />
+              <p className="theme-muted font-medium">
                 {search ? `No vendors match "${search}"` : 'No vendors found'}
               </p>
-              <p className="text-slate-500 text-sm mt-1">Try adjusting your filters or search query</p>
+              <p className="theme-muted text-sm mt-1">Try adjusting your filters or search query</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -446,7 +446,7 @@ export default function Vendors() {
                   <div
                     key={v.id}
                     onClick={() => setSelectedVendor(v)}
-                    className={`relative z-1 bg-navy-800 border rounded-xl p-5 transition-all duration-300 hover:shadow-lg hover:shadow-blue-900/20 hover:border-blue-800/60 group cursor-pointer ${isSelected ? 'border-blue-500 ring-1 ring-blue-500/40' : 'border-blue-900/40'}`}
+                    className={`relative z-1 theme-card p-5 transition-all duration-300 hover:shadow-lg cursor-pointer ${isSelected ? 'ring-2 ring-accent' : ''}`}
                   >
                     {/* Compare checkbox */}
                     <div
@@ -457,7 +457,7 @@ export default function Vendors() {
                       }}
                     >
                       <button
-                        className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 border-blue-500 text-white' : 'bg-navy-700 border-blue-900/40 text-slate-500 hover:border-blue-500 hover:text-blue-400'}`}
+                        className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-colors ${isSelected ? 'bg-accent border-accent text-white' : 'bg-surface border-themed theme-muted hover:border-accent hover:text-accent'}`}
                         title={isSelected ? 'Deselect' : 'Select to compare'}
                         style={{ minHeight: 44, minWidth: 44 }}
                       >
@@ -470,20 +470,20 @@ export default function Vendors() {
                           {getInitials(v.name)}
                         </div>
                         {openPOCount > 0 && (
-                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                             {openPOCount}
                           </span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-mono text-slate-500">{v.vendorCode}</span>
+                          <span className="text-xs font-mono theme-muted">{v.vendorCode}</span>
                         </div>
-                        <h3 className="text-white font-semibold truncate">
+                        <h3 className="theme-title font-semibold truncate">
                           <HighlightText text={v.name} highlight={search} />
                         </h3>
                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${categoryColors[v.category] || 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${categoryColors[v.category] || 'bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-500/30'}`}>
                             <HighlightText text={v.category} highlight={search} />
                           </span>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusColors[v.status]}`}>
@@ -493,27 +493,27 @@ export default function Vendors() {
                       </div>
                     </div>
 
-                  <div className="space-y-2 text-sm text-slate-400 mb-4">
+                  <div className="space-y-2 text-sm theme-muted mb-4">
                     <div className="flex items-center gap-2 min-w-0">
-                      <Building2 className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                      <Building2 className="w-4 h-4 theme-muted flex-shrink-0" />
                       <span className="truncate">
                         <HighlightText text={v.contact} highlight={search} />
                       </span>
                     </div>
                     <div className="flex items-center gap-2 min-w-0">
-                      <Mail className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                      <Mail className="w-4 h-4 theme-muted flex-shrink-0" />
                       <span className="truncate">
                         <HighlightText text={v.email} highlight={search} />
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                      <Clock className="w-4 h-4 theme-muted flex-shrink-0" />
                       <span>{v.leadTime || 7} days lead time</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-blue-900/30">
-                    <span className="text-xs text-slate-500">{v.paymentTerms || 'Net 30'}</span>
+                  <div className="flex items-center justify-between pt-3 border-t border-themed">
+                    <span className="text-xs theme-muted">{v.paymentTerms || 'Net 30'}</span>
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => {
@@ -521,7 +521,7 @@ export default function Vendors() {
                           setSelectedVendor(null);
                           setEditingVendor(v);
                         }}
-                        className="p-2 rounded-lg bg-navy-700 hover:bg-blue-600/20 text-slate-400 hover:text-blue-400 transition-colors"
+                        className="p-2 rounded-lg bg-surface hover:bg-accent-light theme-muted hover:text-accent transition-colors"
                         title="Edit vendor"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -532,7 +532,7 @@ export default function Vendors() {
                           setSelectedVendor(null);
                           handleDelete(v);
                         }}
-                        className="p-2 rounded-lg bg-navy-700 hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
+                        className="p-2 rounded-lg bg-surface hover:bg-danger-light theme-muted hover:text-danger transition-colors"
                         title="Delete vendor"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -549,33 +549,33 @@ export default function Vendors() {
 
       {/* Compare floating bar */}
       {compareIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-3 bg-navy-800 border border-blue-900/40 rounded-xl px-5 py-3 shadow-2xl shadow-black/40">
-          <span className="text-sm text-slate-400">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-3 theme-card px-5 py-3 shadow-2xl">
+          <span className="text-sm theme-muted">
             {compareIds.length} of 2 selected
           </span>
           <button
             onClick={clearSelection}
-            className="px-3 py-1.5 bg-navy-700 hover:bg-navy-600 text-slate-400 hover:text-white text-xs font-medium rounded-lg transition-colors border border-blue-900/40"
+            className="px-3 py-1.5 bg-surface hover:bg-surface-strong theme-muted hover:theme-title text-xs font-medium rounded-lg transition-colors border border-themed"
           >
             Clear Selection
           </button>
           {compareIds.length === 2 ? (
             <button
               onClick={() => setShowCompareModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+              className="flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg"
             >
               <Scale className="w-4 h-4" />
               Compare
             </button>
           ) : (
-            <span className="text-xs text-slate-500">Select 1 more to compare</span>
+            <span className="text-xs theme-muted">Select 1 more to compare</span>
           )}
         </div>
       )}
 
       {/* Max selection warning toast */}
       {maxSelectWarning && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-medium px-4 py-2.5 rounded-lg animate-pulse">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-warning-light border border-orange-300 dark:border-orange-500/20 text-warning dark:text-orange-400 text-xs font-medium px-4 py-2.5 rounded-lg animate-pulse">
           Maximum 2 vendors can be compared at once.
         </div>
       )}
@@ -593,14 +593,14 @@ export default function Vendors() {
       {showAddModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeModal} />
-          <div className="relative z-10 bg-navy-800 border border-blue-900/40 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="sticky top-0 bg-navy-800 px-6 py-4 border-b border-blue-900/40 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white">
+          <div className="relative z-10 theme-modal w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 glass glass-strong px-6 py-4 border-b border-themed flex items-center justify-between">
+              <h2 className="text-lg font-bold theme-title">
                 {editingVendor ? 'Edit Vendor' : 'Add New Vendor'}
               </h2>
               <button
                 onClick={closeModal}
-                className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
+                className="p-2 rounded-lg hover:bg-surface theme-muted hover:theme-title transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -608,8 +608,8 @@ export default function Vendors() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm text-slate-400 mb-1.5">
-                  Company Name <span className="text-red-400">*</span>
+                <label className="block text-sm theme-muted mb-1.5">
+                  Company Name <span className="text-danger">*</span>
                 </label>
                 <input
                   type="text"
@@ -618,30 +618,30 @@ export default function Vendors() {
                     setForm({ ...form, name: e.target.value });
                     if (formErrors.name) setFormErrors({ ...formErrors, name: undefined });
                   }}
-                  className={`w-full px-4 py-2.5 bg-navy-700 border rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${formErrors.name ? 'border-red-500' : 'border-blue-900/40'}`}
+                  className={`w-full px-4 py-2.5 theme-input rounded-lg theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${formErrors.name ? 'border-danger' : ''}`}
                   placeholder="Enter company name"
                 />
                 {formErrors.name && (
-                  <p className="text-red-400 text-xs mt-1">{formErrors.name}</p>
+                  <p className="text-danger text-xs mt-1">{formErrors.name}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm text-slate-400 mb-1.5">
-                  Contact Person <span className="text-red-400">*</span>
+                <label className="block text-sm theme-muted mb-1.5">
+                  Contact Person <span className="text-danger">*</span>
                 </label>
                 <input
                   type="text"
                   value={form.contact}
                   onChange={(e) => setForm({ ...form, contact: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+                  className="w-full px-4 py-2.5 theme-input rounded-lg theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
                   placeholder="Enter contact name"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-slate-400 mb-1.5">
-                  Email <span className="text-red-400">*</span>
+                <label className="block text-sm theme-muted mb-1.5">
+                  Email <span className="text-danger">*</span>
                 </label>
                 <input
                   type="email"
@@ -650,123 +650,123 @@ export default function Vendors() {
                     setForm({ ...form, email: e.target.value });
                     if (formErrors.email) setFormErrors({ ...formErrors, email: undefined });
                   }}
-                  className={`w-full px-4 py-2.5 bg-navy-700 border rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${formErrors.email ? 'border-red-500' : 'border-blue-900/40'}`}
+                  className={`w-full px-4 py-2.5 theme-input rounded-lg theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${formErrors.email ? 'border-danger' : ''}`}
                   placeholder="Enter email address"
                 />
                 {formErrors.email && (
-                  <p className="text-red-400 text-xs mt-1">{formErrors.email}</p>
+                  <p className="text-danger text-xs mt-1">{formErrors.email}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm text-slate-400 mb-1.5">Phone</label>
+                <label className="block text-sm theme-muted mb-1.5">Phone</label>
                 <input
                   type="tel"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+                  className="w-full px-4 py-2.5 theme-input rounded-lg theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
                   placeholder="Enter phone number"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1.5">Category</label>
+                  <label className="block text-sm theme-muted mb-1.5">Category</label>
                   <div className="relative">
                     <select
                       value={form.category}
                       onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
+                      className="w-full theme-select rounded-lg px-4 py-2.5 theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
                     >
                       {CATEGORIES.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted pointer-events-none" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1.5">Payment Terms</label>
+                  <label className="block text-sm theme-muted mb-1.5">Payment Terms</label>
                   <div className="relative">
                     <select
                       value={form.paymentTerms}
                       onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}
-                      className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
+                      className="w-full theme-select rounded-lg px-4 py-2.5 theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
                     >
                       {PAYMENT_TERMS.map((pt) => (
                         <option key={pt} value={pt}>{pt}</option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted pointer-events-none" />
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1.5">Lead Time (days)</label>
+                  <label className="block text-sm theme-muted mb-1.5">Lead Time (days)</label>
                   <input
                     type="number"
                     value={form.leadTime}
                     onChange={(e) => setForm({ ...form, leadTime: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+                    className="w-full px-4 py-2.5 theme-input rounded-lg theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
                     min="0"
                     placeholder="7"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1.5">Status</label>
+                  <label className="block text-sm theme-muted mb-1.5">Status</label>
                   <div className="relative">
                     <select
                       value={form.status}
                       onChange={(e) => setForm({ ...form, status: e.target.value as 'active' | 'inactive' })}
-                      className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
+                      className="w-full theme-select rounded-lg px-4 py-2.5 theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
                     >
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted pointer-events-none" />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm text-slate-400 mb-1.5">Location</label>
+                <label className="block text-sm theme-muted mb-1.5">Location</label>
                 <input
                   type="text"
                   value={form.location}
                   onChange={(e) => setForm({ ...form, location: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+                  className="w-full px-4 py-2.5 theme-input rounded-lg theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
                   placeholder="City, State"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-slate-400 mb-1.5">Notes</label>
+                <label className="block text-sm theme-muted mb-1.5">Notes</label>
                 <textarea
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value.slice(0, 300) })}
-                  className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 resize-none"
+                  className="w-full px-4 py-2.5 theme-input rounded-lg theme-title text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 resize-none"
                   placeholder="Additional notes about this vendor..."
                   rows={3}
                 />
-                <p className="text-xs text-slate-500 mt-1 text-right">{form.notes.length} / 300</p>
+                <p className="text-xs theme-muted mt-1 text-right">{form.notes.length} / 300</p>
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-navy-800 px-6 py-4 border-t border-blue-900/40 flex justify-end gap-3">
+            <div className="sticky bottom-0 glass glass-strong px-6 py-4 border-t border-themed flex justify-end gap-3">
               <button
                 onClick={closeModal}
-                className="px-5 py-2.5 bg-navy-700 hover:bg-navy-600 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-blue-900/40"
+                className="px-5 py-2.5 bg-surface hover:bg-surface-strong theme-muted text-sm font-medium rounded-lg transition-colors border border-themed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 bg-accent hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isSaving ? 'Saving...' : editingVendor ? 'Save Changes' : 'Add Vendor'}
               </button>
@@ -779,23 +779,23 @@ export default function Vendors() {
       {deletingVendor && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeletingVendor(null)} />
-          <div className="relative z-10 bg-navy-800 border border-blue-900/40 rounded-2xl w-full max-w-md shadow-2xl">
+          <div className="relative z-10 theme-modal w-full max-w-md shadow-2xl">
             <div className="p-6">
-              <div className="flex items-center justify-center w-14 h-14 mx-auto mb-4 rounded-full bg-red-500/10">
-                <AlertTriangle className="w-7 h-7 text-red-400" />
+              <div className="flex items-center justify-center w-14 h-14 mx-auto mb-4 rounded-full bg-danger-light">
+                <AlertTriangle className="w-7 h-7 text-danger" />
               </div>
-              <h2 className="text-lg font-bold text-white text-center mb-2">Delete Vendor</h2>
-              <p className="text-slate-400 text-sm text-center mb-4">
-                Are you sure you want to delete <span className="text-white font-medium">{deletingVendor.name}</span>?
+              <h2 className="text-lg font-bold theme-title text-center mb-2">Delete Vendor</h2>
+              <p className="theme-muted text-sm text-center mb-4">
+                Are you sure you want to delete <span className="theme-title font-medium">{deletingVendor.name}</span>?
               </p>
 
               {(deletingVendor as Vendor & { openPOCount?: number }).openPOCount ? (
-                <div className="relative z-1 bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mb-4">
+                <div className="relative z-1 bg-warning-light border border-orange-300 dark:border-orange-500/20 rounded-lg p-4 mb-4">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-orange-400 text-sm font-medium">Warning</p>
-                      <p className="text-orange-300/80 text-xs mt-1">
+                      <p className="text-warning text-sm font-medium">Warning</p>
+                      <p className="text-warning dark:text-orange-300/80 text-xs mt-1">
                         This vendor has {(deletingVendor as Vendor & { openPOCount?: number }).openPOCount} open order(s).
                         Deleting may affect order tracking.
                       </p>
@@ -807,13 +807,13 @@ export default function Vendors() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setDeletingVendor(null)}
-                  className="flex-1 px-4 py-2.5 bg-navy-700 hover:bg-navy-600 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-blue-900/40"
+                  className="flex-1 px-4 py-2.5 bg-surface hover:bg-surface-strong theme-muted text-sm font-medium rounded-lg transition-colors border border-themed"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-danger hover:bg-red-500 text-white text-sm font-medium rounded-lg transition-colors"
                 >
                   Delete
                 </button>
@@ -907,9 +907,9 @@ function CompareModal({
   };
 
   const cmpBg: Record<Cmp, string> = {
-    better: 'bg-emerald-500/10 border-emerald-500/20',
-    worse: 'bg-red-500/10 border-red-500/20',
-    neutral: 'bg-navy-700/50 border-blue-900/40',
+    better: 'bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/20',
+    worse: 'bg-red-100 dark:bg-red-500/10 border-red-300 dark:border-red-500/20',
+    neutral: 'bg-slate-50 dark:bg-surface border-slate-200 dark:border-themed',
   };
 
   const CmpIcon = ({ val }: { val: Cmp }) => {
@@ -928,26 +928,26 @@ function CompareModal({
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-navy-800 border border-blue-900/40 rounded-2xl w-full max-w-lg shadow-2xl">
-        <div className="px-6 py-4 border-b border-blue-900/40 flex items-center justify-between">
+      <div className="relative z-10 theme-modal w-full max-w-lg shadow-2xl">
+        <div className="px-6 py-4 border-b border-themed flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Scale className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-bold text-white">Vendor Comparison</h2>
+            <Scale className="w-5 h-5 text-accent" />
+            <h2 className="text-lg font-bold theme-title">Vendor Comparison</h2>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface theme-muted hover:theme-title transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Vendor headers */}
-        <div className="grid grid-cols-2 gap-4 px-6 py-3 border-b border-blue-900/20">
+        <div className="grid grid-cols-2 gap-4 px-6 py-3 border-b border-themed">
           <div className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${categoryAvatarColors[vendorA.category] || 'bg-slate-500'}`}>
               {getInitials(vendorA.name)}
             </div>
             <div className="min-w-0">
-              <p className="text-white font-semibold text-sm truncate">{vendorA.name}</p>
-              <p className="text-xs text-slate-500">{vendorA.vendorCode}</p>
+              <p className="theme-title font-semibold text-sm truncate">{vendorA.name}</p>
+              <p className="text-xs theme-muted">{vendorA.vendorCode}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -955,8 +955,8 @@ function CompareModal({
               {getInitials(vendorB.name)}
             </div>
             <div className="min-w-0">
-              <p className="text-white font-semibold text-sm truncate">{vendorB.name}</p>
-              <p className="text-xs text-slate-500">{vendorB.vendorCode}</p>
+              <p className="theme-title font-semibold text-sm truncate">{vendorB.name}</p>
+              <p className="text-xs theme-muted">{vendorB.vendorCode}</p>
             </div>
           </div>
         </div>
@@ -965,7 +965,7 @@ function CompareModal({
         <div className="px-6 py-4 space-y-3 max-h-[60vh] overflow-y-auto">
           {metrics.map((m) => (
             <div key={m.label}>
-              <p className="text-xs text-slate-500 font-medium mb-1.5">{m.label} <span className="text-slate-600">({m.note})</span></p>
+              <p className="text-xs theme-muted font-medium mb-1.5">{m.label} <span className="opacity-60">({m.note})</span></p>
               <div className="grid grid-cols-2 gap-3">
                 <div className={`rounded-lg border p-3 flex items-center justify-between ${cmpBg[m.cmpA]}`}>
                   <span className={`text-sm font-semibold ${cmpColor[m.cmpA]}`}>{m.a}</span>
@@ -980,8 +980,8 @@ function CompareModal({
           ))}
         </div>
 
-        <div className="px-6 py-4 border-t border-blue-900/40 flex justify-end">
-          <button onClick={onClose} className="px-5 py-2.5 bg-navy-700 hover:bg-navy-600 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-blue-900/40">
+        <div className="px-6 py-4 border-t border-themed flex justify-end">
+          <button onClick={onClose} className="px-5 py-2.5 bg-surface hover:bg-surface-strong theme-muted text-sm font-medium rounded-lg transition-colors border border-themed">
             Close
           </button>
         </div>
@@ -1031,7 +1031,7 @@ function VendorDetailPanel({
 
       {/* Panel */}
       <div
-        className="absolute right-0 top-0 h-full w-[360px] bg-navy-800 border-l border-blue-900/40 shadow-2xl overflow-y-auto animate-slide-in"
+        className="absolute right-0 top-0 h-full w-[360px] glass glass-strong border-l border-themed shadow-2xl overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         style={{
           animation: 'slideIn 0.3s ease-out forwards',
@@ -1045,11 +1045,11 @@ function VendorDetailPanel({
         `}</style>
 
         {/* Header */}
-        <div className="sticky top-0 bg-navy-800 px-5 py-4 border-b border-blue-900/40 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white truncate pr-4">{vendor.name}</h2>
+        <div className="sticky top-0 glass glass-strong px-5 py-4 border-b border-themed flex items-center justify-between">
+          <h2 className="text-lg font-bold theme-title truncate pr-4">{vendor.name}</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors flex-shrink-0"
+            className="p-2 rounded-lg hover:bg-surface theme-muted hover:theme-title transition-colors flex-shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -1059,7 +1059,7 @@ function VendorDetailPanel({
         <div className="p-5 space-y-6">
           {/* Status & Category */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${categoryColors[vendor.category] || 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${categoryColors[vendor.category] || 'bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-500/30'}`}>
               {vendor.category}
             </span>
             <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[vendor.status]}`}>
@@ -1068,84 +1068,84 @@ function VendorDetailPanel({
           </div>
 
           {/* Vendor ID */}
-          <div className="text-xs text-slate-500 font-mono">{vendor.vendorCode}</div>
+          <div className="text-xs theme-muted font-mono">{vendor.vendorCode}</div>
 
           {/* Contact Info */}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Contact Information</h3>
+            <h3 className="text-xs font-semibold theme-muted uppercase tracking-wide">Contact Information</h3>
 
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <Building2 className="w-4 h-4 text-blue-400" />
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-accent-light flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-4 h-4 text-accent" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-500">Contact Person</p>
-                <p className="text-sm text-white truncate">{vendor.contact || '-'}</p>
+                <p className="text-xs theme-muted">Contact Person</p>
+                <p className="text-sm theme-title truncate">{vendor.contact || '-'}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <Mail className="w-4 h-4 text-blue-400" />
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-accent-light flex items-center justify-center flex-shrink-0">
+                <Mail className="w-4 h-4 text-accent" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-500">Email</p>
-                <p className="text-sm text-white truncate">{vendor.email || '-'}</p>
+                <p className="text-xs theme-muted">Email</p>
+                <p className="text-sm theme-title truncate">{vendor.email || '-'}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <Phone className="w-4 h-4 text-blue-400" />
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-accent-light flex items-center justify-center flex-shrink-0">
+                <Phone className="w-4 h-4 text-accent" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-500">Phone</p>
-                <p className="text-sm text-white truncate">{vendor.phone || '-'}</p>
+                <p className="text-xs theme-muted">Phone</p>
+                <p className="text-sm theme-title truncate">{vendor.phone || '-'}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-4 h-4 text-blue-400" />
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-accent-light flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-4 h-4 text-accent" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-500">Location</p>
-                <p className="text-sm text-white truncate">{vendor.location || '-'}</p>
+                <p className="text-xs theme-muted">Location</p>
+                <p className="text-sm theme-title truncate">{vendor.location || '-'}</p>
               </div>
             </div>
           </div>
 
           {/* Vendor Details */}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Vendor Details</h3>
+            <h3 className="text-xs font-semibold theme-muted uppercase tracking-wide">Vendor Details</h3>
 
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-4 h-4 text-emerald-400" />
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-success-light flex items-center justify-center flex-shrink-0">
+                <Clock className="w-4 h-4 text-success" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-500">Lead Time</p>
-                <p className="text-sm text-white">{vendor.leadTime || 7} days</p>
+                <p className="text-xs theme-muted">Lead Time</p>
+                <p className="text-sm theme-title">{vendor.leadTime || 7} days</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                <FileTextIcon className="w-4 h-4 text-emerald-400" />
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-success-light flex items-center justify-center flex-shrink-0">
+                <FileTextIcon className="w-4 h-4 text-success" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-500">Payment Terms</p>
-                <p className="text-sm text-white">{vendor.paymentTerms || 'Net 30'}</p>
+                <p className="text-xs theme-muted">Payment Terms</p>
+                <p className="text-sm theme-title">{vendor.paymentTerms || 'Net 30'}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                <Calendar className="w-4 h-4 text-emerald-400" />
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-success-light flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-4 h-4 text-success" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-500">Contract End</p>
-                <p className="text-sm text-white">{vendor.contractEnd || '-'}</p>
+                <p className="text-xs theme-muted">Contract End</p>
+                <p className="text-sm theme-title">{vendor.contractEnd || '-'}</p>
               </div>
             </div>
           </div>
@@ -1153,13 +1153,13 @@ function VendorDetailPanel({
           {/* Notes */}
           {(vendor as Vendor & { notes?: string }).notes && (
             <div className="space-y-3">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Notes</h3>
+              <h3 className="text-xs font-semibold theme-muted uppercase tracking-wide">Notes</h3>
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                  <StickyNote className="w-4 h-4 text-blue-400" />
+                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-accent-light flex items-center justify-center flex-shrink-0">
+                  <StickyNote className="w-4 h-4 text-accent" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm text-white whitespace-pre-wrap">{(vendor as Vendor & { notes?: string }).notes}</p>
+                  <p className="text-sm theme-title whitespace-pre-wrap">{(vendor as Vendor & { notes?: string }).notes}</p>
                 </div>
               </div>
             </div>
@@ -1167,36 +1167,36 @@ function VendorDetailPanel({
 
           {/* Statistics */}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Statistics</h3>
+            <h3 className="text-xs font-semibold theme-muted uppercase tracking-wide">Statistics</h3>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-navy-700/50 rounded-xl p-4">
+              <div className="bg-slate-50 dark:bg-surface rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <FileTextIcon className="w-4 h-4 text-blue-400" />
-                  <span className="text-xs text-slate-500">Total POs</span>
+                  <FileTextIcon className="w-4 h-4 text-accent" />
+                  <span className="text-xs theme-muted">Total POs</span>
                 </div>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-2xl font-bold theme-title">
                   {totalPOCount === 0 ? 'No orders yet' : totalPOCount}
                 </p>
               </div>
 
-              <div className="bg-navy-700/50 rounded-xl p-4">
+              <div className="bg-slate-50 dark:bg-surface rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Star className="w-4 h-4 text-yellow-400" />
-                  <span className="text-xs text-slate-500">Avg Rating</span>
+                  <Star className="w-4 h-4 text-yellow-500" />
+                  <span className="text-xs theme-muted">Avg Rating</span>
                 </div>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-2xl font-bold theme-title">
                   {avgRating !== null ? `${avgRating}/100` : 'Not rated yet'}
                 </p>
               </div>
             </div>
 
-            <div className="bg-navy-700/50 rounded-xl p-4">
+            <div className="bg-slate-50 dark:bg-surface rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-4 h-4 text-orange-400" />
-                <span className="text-xs text-slate-500">Last Order</span>
+                <Calendar className="w-4 h-4 text-warning" />
+                <span className="text-xs theme-muted">Last Order</span>
               </div>
-              <p className="text-sm text-white">
+              <p className="text-sm theme-title">
                 {lastOrderDate ? lastOrderDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No orders yet'}
               </p>
             </div>
@@ -1204,17 +1204,17 @@ function VendorDetailPanel({
         </div>
 
         {/* Footer Actions */}
-        <div className="sticky bottom-0 bg-navy-800 px-5 py-4 border-t border-blue-900/40 flex gap-3">
+        <div className="sticky bottom-0 glass glass-strong px-5 py-4 border-t border-themed flex gap-3">
           <button
             onClick={() => onEdit(vendor)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-accent hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
           >
             <Edit2 className="w-4 h-4" />
             Edit
           </button>
           <button
             onClick={() => onDelete(vendor)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-navy-700 hover:bg-red-600/20 text-slate-300 hover:text-red-400 text-sm font-medium rounded-lg transition-colors border border-blue-900/40"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-surface hover:bg-danger-light theme-muted hover:text-danger text-sm font-medium rounded-lg transition-colors border border-themed"
           >
             <Trash2 className="w-4 h-4" />
             Delete
