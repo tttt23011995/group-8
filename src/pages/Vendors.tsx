@@ -218,7 +218,7 @@ export default function Vendors() {
           : v
       );
       setVendors(updated);
-      saveVendors(updated);
+      await saveVendors(updated);
     } else {
       const vendorCode = await generateVendorCode();
       const newVendor: Vendor & { notes?: string } = {
@@ -239,7 +239,7 @@ export default function Vendors() {
       };
       const updated = [...vendors, newVendor];
       setVendors(updated);
-      saveVendors(updated);
+      await saveVendors(updated);
     }
 
     closeModal();
@@ -257,11 +257,11 @@ export default function Vendors() {
     setDeletingVendor({ ...vendor, openPOCount: openPOs } as Vendor & { openPOCount: number });
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deletingVendor) return;
     const updated = vendors.filter((v) => v.id !== deletingVendor.id);
     setVendors(updated);
-    saveVendors(updated);
+    await saveVendors(updated);
     setDeletingVendor(null);
   }
 

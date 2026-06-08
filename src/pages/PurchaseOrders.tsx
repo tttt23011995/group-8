@@ -344,7 +344,7 @@ export default function PurchaseOrders() {
           : po
       );
       setPos(updated);
-      savePurchaseOrders(updated);
+      await savePurchaseOrders(updated);
     } else {
       const poNumber = pendingPONumber || await generatePONumber();
       const newPO: PurchaseOrder = {
@@ -363,17 +363,17 @@ export default function PurchaseOrders() {
       };
       const updated = [...pos, newPO];
       setPos(updated);
-      savePurchaseOrders(updated);
+      await savePurchaseOrders(updated);
     }
 
     closeForm();
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deletingPO) return;
     const updated = pos.filter((p) => p.id !== deletingPO.id);
     setPos(updated);
-    savePurchaseOrders(updated);
+    await savePurchaseOrders(updated);
     setDeletingPO(null);
   }
 
@@ -434,7 +434,7 @@ export default function PurchaseOrders() {
     };
     const updated = [...pos, newPO];
     setPos(updated);
-    savePurchaseOrders(updated);
+    await savePurchaseOrders(updated);
   }
 
   function toggleSelectAll() {
@@ -455,10 +455,10 @@ export default function PurchaseOrders() {
     setSelectedIds(next);
   }
 
-  function confirmBulkDelete() {
+  async function confirmBulkDelete() {
     const updated = pos.filter((p) => !selectedIds.has(p.id));
     setPos(updated);
-    savePurchaseOrders(updated);
+    await savePurchaseOrders(updated);
     setSelectedIds(new Set());
     setShowBulkDeleteConfirm(false);
   }

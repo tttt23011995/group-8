@@ -476,7 +476,7 @@ export async function getOpenPOCountForVendor(vendorId: string): Promise<number>
       .from('purchase_orders')
       .select('*', { count: 'exact', head: true })
       .eq('vendor_id', vendorId)
-      .not('status', 'in', '("delivered","invoiced")');
+      .not('status', 'in', '(delivered,invoiced)');
     if (error) { console.error('getOpenPOCountForVendor:', error); return 0; }
     return count ?? 0;
   } catch (e) {

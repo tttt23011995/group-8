@@ -406,15 +406,13 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
     setActiveFilter((prev) => (prev === key ? null : key));
   }, []);
 
-  const handleSaveNote = useCallback((poId: string, notes: DeliveryNote[]) => {
-    setPos((prev) => {
-      const updated = prev.map((po) =>
-        po.id === poId ? { ...po, deliveryNotes: notes } : po
-      );
-      savePurchaseOrders(updated);
-      return updated;
-    });
-  }, []);
+  const handleSaveNote = useCallback(async (poId: string, notes: DeliveryNote[]) => {
+    const updated = pos.map((po) =>
+      po.id === poId ? { ...po, deliveryNotes: notes } : po
+    );
+    setPos(updated);
+    await savePurchaseOrders(updated);
+  }, [pos]);
 
   function toggleNotes(poId: string) {
     setExpandedNotes((prev) => {
@@ -425,83 +423,69 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
     });
   }
 
-  const advanceStatus = useCallback((poId: string) => {
-    setPos((prev) => {
-      const updated = prev.map((po) => {
-        if (po.id !== poId) return po;
-        const idx = STATUS_ORDER.indexOf(po.status);
-        if (idx >= STATUS_ORDER.length - 1) return po;
-        const nextStatus = STATUS_ORDER[idx + 1];
-        const extended = po as PurchaseOrder & { actualDeliveryDate?: string };
-        const updatedPo: PurchaseOrder & { actualDeliveryDate?: string } = { ...po, status: nextStatus };
-        if (nextStatus === 'delivered' && !extended.actualDeliveryDate) {
-          updatedPo.actualDeliveryDate = new Date().toISOString().slice(0, 10);
-        }
-        return updatedPo;
-      });
-
-      savePurchaseOrders(updated);
-
-      // Update delivery performance for newly delivered/invoiced POs
-      setPerf((prevPerf) => {
-        const newPerf = { ...prevPerf };
-        let changed = false;
-        updated.forEach((po) => {
-          const extended = po as PurchaseOrder & { actualDeliveryDate?: string };
-          const existing = prevPerf[po.id];
-          if (existing) return; // never overwrite
-          const perfResult = calcDeliveryPerformance(extended);
-          if (perfResult) {
-            newPerf[po.id] = perfResult;
-            changed = true;
-          }
-        });
-        if (changed) {
-          saveDeliveryPerformance(newPerf);
-        }
-        return changed ? newPerf : prevPerf;
-      });
-
-      return updated;
+  const advanceStatus = useCallback(async (poId: string) => {
+    const updated = pos.map((po) => {
+      if (po.id !== poId) return po;
+      const idx = STATUS_ORDER.indexOf(po.status);
+      if (idx >= STATUS_ORDER.length - 1) return po;
+      const nextStatus = STATUS_ORDER[idx + 1];
+      const extended = po as PurchaseOrder & { actualDeliveryDate?: string };
+      const updatedPo: PurchaseOrder & { actualDeliveryDate?: string } = { ...po, status: nextStatus };
+      if (nextStatus === 'delivered' && !extended.actualDeliveryDate) {
+        updatedPo.actualDeliveryDate = new Date().toISOString().slice(0, 10);
+      }
+      return updatedPo;
     });
-  }, []);
 
-  const revertStatus = useCallback((poId: string) => {
-    setPos((prev) => {
-      const updated = prev.map((po) => {
-        if (po.id !== poId) return po;
-        const idx = STATUS_ORDER.indexOf(po.status);
-        if (idx <= 0) return po;
-        const prevStatus = STATUS_ORDER[idx - 1];
-        const updatedPo: PurchaseOrder & { actualDeliveryDate?: string } = { ...po, status: prevStatus };
-        // Delivered -> In Transit: remove actualDeliveryDate
-        if (po.status === 'delivered') {
-          delete (updatedPo as Record<string, unknown>).actualDeliveryDate;
-        }
-        return updatedPo;
-      });
+    setPos(updated);
+    await savePurchaseOrders(updated);
 
-      savePurchaseOrders(updated);
-
-      // Remove delivery performance if reverting from delivered/invoiced
-      setPerf((prevPerf) => {
-        const newPerf = { ...prevPerf };
-        let changed = false;
-        updated.forEach((po) => {
-          if (po.status !== 'delivered' && po.status !== 'invoiced' && prevPerf[po.id]) {
-            delete newPerf[po.id];
-            changed = true;
-          }
-        });
-        if (changed) {
-          saveDeliveryPerformance(newPerf);
-        }
-        return changed ? newPerf : prevPerf;
-      });
-
-      return updated;
+    const newPerf = { ...perf };
+    let changed = false;
+    updated.forEach((po) => {
+      const extended = po as PurchaseOrder & { actualDeliveryDate?: string };
+      if (perf[po.id]) return;
+      const perfResult = calcDeliveryPerformance(extended);
+      if (perfResult) {
+        newPerf[po.id] = perfResult;
+        changed = true;
+      }
     });
-  }, []);
+    if (changed) {
+      setPerf(newPerf);
+      await saveDeliveryPerformance(newPerf);
+    }
+  }, [pos, perf]);
+
+  const revertStatus = useCallback(async (poId: string) => {
+    const updated = pos.map((po) => {
+      if (po.id !== poId) return po;
+      const idx = STATUS_ORDER.indexOf(po.status);
+      if (idx <= 0) return po;
+      const prevStatus = STATUS_ORDER[idx - 1];
+      const updatedPo: PurchaseOrder & { actualDeliveryDate?: string } = { ...po, status: prevStatus };
+      if (po.status === 'delivered') {
+        delete (updatedPo as Record<string, unknown>).actualDeliveryDate;
+      }
+      return updatedPo;
+    });
+
+    setPos(updated);
+    await savePurchaseOrders(updated);
+
+    const newPerf = { ...perf };
+    let changed = false;
+    updated.forEach((po) => {
+      if (po.status !== 'delivered' && po.status !== 'invoiced' && perf[po.id]) {
+        delete newPerf[po.id];
+        changed = true;
+      }
+    });
+    if (changed) {
+      setPerf(newPerf);
+      await saveDeliveryPerformance(newPerf);
+    }
+  }, [pos, perf]);
 
   const badgeItems: { key: string; label: string; count: number; color: string; bg: string; activeBg: string; pulse: boolean }[] = [
     { key: 'ordered',     label: 'Ordered',    count: counts.ordered,       color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/20',    activeBg: 'bg-blue-600/30 border-blue-500/50',    pulse: false },
