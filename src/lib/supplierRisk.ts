@@ -19,10 +19,6 @@ export interface RiskCategory {
   message: string;
 }
 
-/**
- * New SupplierRisk interface with simplified structure
- * Uses lowercase risk levels and detectedRisks array
- */
 export interface NewSupplierRisk {
   vendorId: string;
   vendorName: string;
@@ -70,10 +66,6 @@ function getCategoryAverageLeadTime(vendors: Vendor[], category: string): number
 
 // ── Risk Calculators ─────────────────────────────────────────────────────
 
-/**
- * 1. DELIVERY RISK
- * Detects overdue shipments, chronic late delivery, and extended lead times
- */
 function calculateDeliveryRisks(
   vendor: Vendor,
   vendorPos: PurchaseOrder[],
@@ -84,7 +76,6 @@ function calculateDeliveryRisks(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // 1.1 Overdue shipments - PO not delivered and past delivery date
   const overduePOs = vendorPos.filter(po => {
     if (po.status === 'delivered' || po.status === 'invoiced') return false;
     const deliveryDate = new Date(po.deliveryDate);
@@ -101,7 +92,6 @@ function calculateDeliveryRisks(
     });
   }
 
-  // 1.2 Chronic late delivery - late rate > 40%
   const completedPOs = vendorPos.filter(po => po.status === 'delivered' || po.status === 'invoiced');
   let lateCount = 0;
   let totalWithPerf = 0;
@@ -125,7 +115,6 @@ function calculateDeliveryRisks(
     });
   }
 
-  // 1.3 Long lead time compared to category average
   if (categoryAvgLeadTime > 0 && vendor.leadTime > categoryAvgLeadTime * 1.2) {
     risks.push({
       type: 'Extended Lead Time',
@@ -138,10 +127,6 @@ function calculateDeliveryRisks(
   return risks;
 }
 
-/**
- * 2. PERFORMANCE RISK
- * Based on vendor ratings - overall score, quality metrics
- */
 function calculatePerformanceRisks(ratings: VendorRating[]): RiskCategory[] {
   const risks: RiskCategory[] = [];
 
@@ -150,7 +135,6 @@ function calculatePerformanceRisks(ratings: VendorRating[]): RiskCategory[] {
   const avgOverall = ratings.reduce((s, r) => s + (r.overall ?? 0), 0) / ratings.length;
   const avgQuality = ratings.reduce((s, r) => s + (r.quality ?? 0), 0) / ratings.length;
 
-  // 2.1 Low overall score (< 60)
   if (avgOverall < 60) {
     risks.push({
       type: 'Low Performance Score',
@@ -158,9 +142,7 @@ function calculatePerformanceRisks(ratings: VendorRating[]): RiskCategory[] {
       scoreImpact: 25,
       message: `Average performance score of ${avgOverall.toFixed(1)} is critically low`,
     });
-  }
-  // 2.2 Medium performance concern (60-75)
-  else if (avgOverall >= 60 && avgOverall < 75) {
+  } else if (avgOverall >= 60 && avgOverall < 75) {
     risks.push({
       type: 'Moderate Performance',
       severity: 'medium',
@@ -169,7 +151,6 @@ function calculatePerformanceRisks(ratings: VendorRating[]): RiskCategory[] {
     });
   }
 
-  // 2.3 Quality issue - quality score < 70
   if (avgQuality < 70) {
     risks.push({
       type: 'Quality Risk',
@@ -182,10 +163,6 @@ function calculatePerformanceRisks(ratings: VendorRating[]): RiskCategory[] {
   return risks;
 }
 
-/**
- * 3. CONTRACT RISK
- * Contract expiration and expired contracts with active POs
- */
 function calculateContractRisks(vendor: Vendor, openPOCount: number): RiskCategory[] {
   const risks: RiskCategory[] = [];
   const today = new Date();
@@ -196,7 +173,6 @@ function calculateContractRisks(vendor: Vendor, openPOCount: number): RiskCatego
 
   const daysToExpiry = getDaysBetween(today, contractEnd);
 
-  // 3.1 Contract expiring within 90 days
   if (daysToExpiry > 0 && daysToExpiry <= 90) {
     risks.push({
       type: 'Contract Expiring Soon',
@@ -206,7 +182,6 @@ function calculateContractRisks(vendor: Vendor, openPOCount: number): RiskCatego
     });
   }
 
-  // 3.2 Contract expired but vendor still active with open POs
   if (daysToExpiry < 0 && vendor.status === 'active' && openPOCount > 0) {
     risks.push({
       type: 'Expired Contract with Active POs',
@@ -219,10 +194,6 @@ function calculateContractRisks(vendor: Vendor, openPOCount: number): RiskCatego
   return risks;
 }
 
-/**
- * 4. PROCUREMENT EXPOSURE RISK
- * Spend concentration, too many open POs, stuck POs
- */
 function calculateExposureRisks(
   _vendor: Vendor,
   vendorPos: PurchaseOrder[],
@@ -234,7 +205,6 @@ function calculateExposureRisks(
   const vendorSpend = vendorPos.reduce((s, po) => s + po.total, 0);
   const spendShare = totalSpend > 0 ? (vendorSpend / totalSpend) * 100 : 0;
 
-  // 4.1 Spend concentration > 35%
   if (spendShare > 35) {
     risks.push({
       type: 'Supplier Dependency',
@@ -244,7 +214,6 @@ function calculateExposureRisks(
     });
   }
 
-  // 4.2 Too many open POs (> 5)
   if (openPOCount > 5) {
     risks.push({
       type: 'High Open PO Count',
@@ -254,7 +223,6 @@ function calculateExposureRisks(
     });
   }
 
-  // 4.3 Stuck POs - ordered > 14 days or confirmed > 21 days
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -280,10 +248,6 @@ function calculateExposureRisks(
   return risks;
 }
 
-/**
- * 5. HIGH VALUE EXPOSURE
- * PO totals exceeding 95th percentile
- */
 function calculateHighValueRisks(
   vendorPos: PurchaseOrder[],
   allPos: PurchaseOrder[]
@@ -311,32 +275,28 @@ function calculateHighValueRisks(
 
 // ── Core Analysis Functions ───────────────────────────────────────────────
 
-/**
- * Calculate risk for a single supplier
- */
-export function getSupplierRisk(vendorId: string): NewSupplierRisk | null {
-  const vendors = getVendors();
+export async function getSupplierRisk(vendorId: string): Promise<NewSupplierRisk | null> {
+  const vendors = await getVendors();
   const vendor = vendors.find(v => v.id === vendorId);
 
   if (!vendor) return null;
 
-  const allPos = getPurchaseOrders();
+  const allPos = await getPurchaseOrders();
   const vendorPos = allPos.filter(po => po.vendorId === vendorId);
-  const ratings = getVendorRatings().filter(r => r.vendorId === vendorId);
-  const perfMap = getDeliveryPerformance();
+  const allRatings = await getVendorRatings();
+  const ratings = allRatings.filter(r => r.vendorId === vendorId);
+  const perfMap = await getDeliveryPerformance();
 
   const categoryAvgLeadTime = getCategoryAverageLeadTime(vendors, vendor.category);
   const totalSpend = allPos.reduce((s, po) => s + po.total, 0);
-  const openPOCount = getOpenPOCountForVendor(vendorId);
+  const openPOCount = await getOpenPOCountForVendor(vendorId);
 
-  // Calculate all risk categories
   const deliveryRisks = calculateDeliveryRisks(vendor, vendorPos, perfMap, categoryAvgLeadTime);
   const performanceRisks = calculatePerformanceRisks(ratings);
   const contractRisks = calculateContractRisks(vendor, openPOCount);
   const exposureRisks = calculateExposureRisks(vendor, vendorPos, totalSpend, openPOCount);
   const highValueRisks = calculateHighValueRisks(vendorPos, allPos);
 
-  // Combine all detected risks
   const detectedRisks: RiskCategory[] = [
     ...deliveryRisks,
     ...performanceRisks,
@@ -345,11 +305,9 @@ export function getSupplierRisk(vendorId: string): NewSupplierRisk | null {
     ...highValueRisks,
   ];
 
-  // Calculate overall risk score (clamped 0-100)
   const rawScore = detectedRisks.reduce((sum, r) => sum + r.scoreImpact, 0);
   const overallRiskScore = Math.min(100, Math.max(0, rawScore));
 
-  // Determine risk level based on thresholds
   let riskLevel: 'low' | 'medium' | 'high';
   if (overallRiskScore <= 30) {
     riskLevel = 'low';
@@ -359,7 +317,6 @@ export function getSupplierRisk(vendorId: string): NewSupplierRisk | null {
     riskLevel = 'high';
   }
 
-  // Calculate late delivery rate for the supplier
   const completedPOs = vendorPos.filter(po => po.status === 'delivered' || po.status === 'invoiced');
   let lateCount = 0;
   completedPOs.forEach(po => {
@@ -370,7 +327,6 @@ export function getSupplierRisk(vendorId: string): NewSupplierRisk | null {
     ? (lateCount / completedPOs.length) * 100
     : 0;
 
-  // Calculate spend exposure percentage
   const vendorSpend = vendorPos.reduce((s, po) => s + po.total, 0);
   const spendExposure = totalSpend > 0 ? (vendorSpend / totalSpend) * 100 : 0;
 
@@ -387,31 +343,79 @@ export function getSupplierRisk(vendorId: string): NewSupplierRisk | null {
   };
 }
 
-/**
- * Get risks for all suppliers, sorted by highest risk first
- */
-export function getSupplierRisks(): NewSupplierRisk[] {
-  const vendors = getVendors();
+export async function getSupplierRisks(): Promise<NewSupplierRisk[]> {
+  const vendors = await getVendors();
+  const allPos = await getPurchaseOrders();
+  const allRatings = await getVendorRatings();
+  const perfMap = await getDeliveryPerformance();
+
+  const totalSpend = allPos.reduce((s, po) => s + po.total, 0);
   const risks: NewSupplierRisk[] = [];
 
   for (const vendor of vendors) {
-    const risk = getSupplierRisk(vendor.id);
-    if (risk) {
-      risks.push(risk);
+    const vendorPos = allPos.filter(po => po.vendorId === vendor.id);
+    const ratings = allRatings.filter(r => r.vendorId === vendor.id);
+    const categoryAvgLeadTime = getCategoryAverageLeadTime(vendors, vendor.category);
+    const openPOCount = await getOpenPOCountForVendor(vendor.id);
+
+    const deliveryRisks = calculateDeliveryRisks(vendor, vendorPos, perfMap, categoryAvgLeadTime);
+    const performanceRisks = calculatePerformanceRisks(ratings);
+    const contractRisks = calculateContractRisks(vendor, openPOCount);
+    const exposureRisks = calculateExposureRisks(vendor, vendorPos, totalSpend, openPOCount);
+    const highValueRisks = calculateHighValueRisks(vendorPos, allPos);
+
+    const detectedRisks: RiskCategory[] = [
+      ...deliveryRisks,
+      ...performanceRisks,
+      ...contractRisks,
+      ...exposureRisks,
+      ...highValueRisks,
+    ];
+
+    const rawScore = detectedRisks.reduce((sum, r) => sum + r.scoreImpact, 0);
+    const overallRiskScore = Math.min(100, Math.max(0, rawScore));
+
+    let riskLevel: 'low' | 'medium' | 'high';
+    if (overallRiskScore <= 30) {
+      riskLevel = 'low';
+    } else if (overallRiskScore <= 60) {
+      riskLevel = 'medium';
+    } else {
+      riskLevel = 'high';
     }
+
+    const completedPOs = vendorPos.filter(po => po.status === 'delivered' || po.status === 'invoiced');
+    let lateCount = 0;
+    completedPOs.forEach(po => {
+      const perf = perfMap[po.id];
+      if (perf && !perf.onTime) lateCount++;
+    });
+    const lateDeliveryRate = completedPOs.length > 0
+      ? (lateCount / completedPOs.length) * 100
+      : 0;
+
+    const vendorSpend = vendorPos.reduce((s, po) => s + po.total, 0);
+    const spendExposure = totalSpend > 0 ? (vendorSpend / totalSpend) * 100 : 0;
+
+    risks.push({
+      vendorId: vendor.id,
+      vendorName: vendor.name,
+      category: vendor.category,
+      overallRiskScore,
+      riskLevel,
+      detectedRisks,
+      spendExposure,
+      openPOCount,
+      lateDeliveryRate,
+    });
   }
 
-  // Sort by highest risk score first
   return risks.sort((a, b) => b.overallRiskScore - a.overallRiskScore);
 }
 
-/**
- * Get aggregate dashboard metrics for risk overview
- * Compatible with useAnimatedCounter() hook
- */
-export function getRiskDashboardMetrics(): RiskDashboardMetrics {
-  const risks = getSupplierRisks();
-  const pos = getPurchaseOrders();
+export async function getRiskDashboardMetrics(): Promise<RiskDashboardMetrics> {
+  const risks = await getSupplierRisks();
+  const pos = await getPurchaseOrders();
 
   const totalSuppliers = risks.length;
   const highRiskSuppliers = risks.filter(r => r.riskLevel === 'high').length;
@@ -422,12 +426,10 @@ export function getRiskDashboardMetrics(): RiskDashboardMetrics {
     ? Math.round(risks.reduce((sum, r) => sum + r.overallRiskScore, 0) / risks.length)
     : 0;
 
-  // Count high-severity risks as critical alerts
   const criticalAlerts = risks.reduce((sum, r) => {
     return sum + r.detectedRisks.filter(risk => risk.severity === 'high').length;
   }, 0);
 
-  // Count overdue purchase orders across all suppliers
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const overduePOs = pos.filter(po => {
@@ -448,20 +450,13 @@ export function getRiskDashboardMetrics(): RiskDashboardMetrics {
   };
 }
 
-// ── Additional Helper Exports ─────────────────────────────────────────────
-
-/**
- * Get suppliers filtered by risk level
- */
-export function getSuppliersByRiskLevel(level: 'low' | 'medium' | 'high'): NewSupplierRisk[] {
-  return getSupplierRisks().filter(r => r.riskLevel === level);
+export async function getSuppliersByRiskLevel(level: 'low' | 'medium' | 'high'): Promise<NewSupplierRisk[]> {
+  const risks = await getSupplierRisks();
+  return risks.filter(r => r.riskLevel === level);
 }
 
-/**
- * Get count of suppliers at each risk level
- */
-export function getRiskLevelCounts(): { low: number; medium: number; high: number } {
-  const risks = getSupplierRisks();
+export async function getRiskLevelCounts(): Promise<{ low: number; medium: number; high: number }> {
+  const risks = await getSupplierRisks();
   return {
     low: risks.filter(r => r.riskLevel === 'low').length,
     medium: risks.filter(r => r.riskLevel === 'medium').length,
@@ -469,20 +464,14 @@ export function getRiskLevelCounts(): { low: number; medium: number; high: numbe
   };
 }
 
-/**
- * Check if a specific vendor has any high-severity risks
- */
-export function hasCriticalRisk(vendorId: string): boolean {
-  const risk = getSupplierRisk(vendorId);
+export async function hasCriticalRisk(vendorId: string): Promise<boolean> {
+  const risk = await getSupplierRisk(vendorId);
   if (!risk) return false;
   return risk.detectedRisks.some(r => r.severity === 'high');
 }
 
-/**
- * Get all risk types detected across all suppliers (unique)
- */
-export function getAllDetectedRiskTypes(): string[] {
-  const risks = getSupplierRisks();
+export async function getAllDetectedRiskTypes(): Promise<string[]> {
+  const risks = await getSupplierRisks();
   const typeSet = new Set<string>();
   risks.forEach(r => {
     r.detectedRisks.forEach(dr => typeSet.add(dr.type));
@@ -490,19 +479,12 @@ export function getAllDetectedRiskTypes(): string[] {
   return Array.from(typeSet).sort();
 }
 
-/**
- * Force recalculation of all supplier risks
- * Useful for triggering re-renders in React components
- */
-export function recalculateAllRisks(): NewSupplierRisk[] {
+export async function recalculateAllRisks(): Promise<NewSupplierRisk[]> {
   return getSupplierRisks();
 }
 
 // ── Backward Compatibility Exports (Legacy) ─────────────────────────────────
 
-/**
- * Legacy SupplierMetrics interface for backward compatibility with Delivery.tsx
- */
 export interface LegacySupplierMetrics {
   vendorId: string;
   vendorName: string;
@@ -525,9 +507,6 @@ export interface LegacySupplierMetrics {
   vendorRatingResponsiveness: number | null;
 }
 
-/**
- * Legacy SupplierRisk interface for backward compatibility with Delivery.tsx
- */
 export interface LegacySupplierRisk {
   vendorId: string;
   vendorName: string;
@@ -546,26 +525,27 @@ export interface LegacySupplierRiskEntry {
   risk: LegacySupplierRisk;
 }
 
-/**
- * Build legacy metrics for a single vendor
- */
-function buildLegacyMetrics(vendor: Vendor, allPos: PurchaseOrder[], totalOrders: number, totalSpend: number, today: Date): LegacySupplierMetrics | null {
+function buildLegacyMetrics(
+  vendor: Vendor,
+  allPos: PurchaseOrder[],
+  allRatings: VendorRating[],
+  perfMap: Record<string, DeliveryPerformance>,
+  totalOrders: number,
+  totalSpend: number,
+  today: Date
+): LegacySupplierMetrics | null {
   const vendorPOs = allPos.filter(p => p.vendorId === vendor.id);
   if (vendorPOs.length === 0) return null;
 
-  const perfMap = getDeliveryPerformance();
-
-  // Late Orders
   let lateOrders = 0;
   const delayDaysArr: number[] = [];
 
   for (const po of vendorPOs) {
-    const ext = po as PurchaseOrder & { actualDeliveryDate?: string };
     const isCompleted = po.status === 'delivered' || po.status === 'invoiced';
 
     if (isCompleted) {
-      if (ext.actualDeliveryDate) {
-        const actual = new Date(ext.actualDeliveryDate);
+      if (po.actualDeliveryDate) {
+        const actual = new Date(po.actualDeliveryDate);
         const expected = new Date(po.deliveryDate);
         actual.setHours(0, 0, 0, 0);
         expected.setHours(0, 0, 0, 0);
@@ -584,7 +564,6 @@ function buildLegacyMetrics(vendor: Vendor, allPos: PurchaseOrder[], totalOrders
     }
   }
 
-  // Current Overdue
   let currentOverdueOrders = 0;
   for (const po of vendorPOs) {
     if (po.status === 'delivered' || po.status === 'invoiced') continue;
@@ -601,7 +580,6 @@ function buildLegacyMetrics(vendor: Vendor, allPos: PurchaseOrder[], totalOrders
     ? parseFloat((delayDaysArr.reduce((s, v) => s + v, 0) / delayDaysArr.length).toFixed(1))
     : 0;
 
-  // On-Time Delivery Rate
   const completedPOs = vendorPOs.filter(p => p.status === 'delivered' || p.status === 'invoiced');
   let onTimeDeliveryRate = 100;
   if (completedPOs.length > 0) {
@@ -609,15 +587,13 @@ function buildLegacyMetrics(vendor: Vendor, allPos: PurchaseOrder[], totalOrders
     onTimeDeliveryRate = Math.round((onTimeCount / completedPOs.length) * 100);
   }
 
-  // Average Lead Time
   const leadTimes: number[] = [];
   for (const po of vendorPOs) {
-    const ext = po as PurchaseOrder & { actualDeliveryDate?: string };
     const start = new Date(po.date);
     start.setHours(0, 0, 0, 0);
 
-    if (ext.actualDeliveryDate) {
-      const end = new Date(ext.actualDeliveryDate);
+    if (po.actualDeliveryDate) {
+      const end = new Date(po.actualDeliveryDate);
       end.setHours(0, 0, 0, 0);
       leadTimes.push(Math.floor((end.getTime() - start.getTime()) / 86400000));
     } else if (po.deliveryDate) {
@@ -632,7 +608,6 @@ function buildLegacyMetrics(vendor: Vendor, allPos: PurchaseOrder[], totalOrders
     ? parseFloat((leadTimes.reduce((s, v) => s + v, 0) / leadTimes.length).toFixed(1))
     : 0;
 
-  // Spend & Order Share
   const supplierSpend = vendorPOs.reduce((s, p) => s + (p.total || 0), 0);
   const supplierOrderShare = totalOrders > 0
     ? parseFloat(((vendorPOs.length / totalOrders) * 100).toFixed(1))
@@ -641,9 +616,7 @@ function buildLegacyMetrics(vendor: Vendor, allPos: PurchaseOrder[], totalOrders
     ? parseFloat(((supplierSpend / totalSpend) * 100).toFixed(1))
     : 0;
 
-  // Vendor Ratings
-  const ratings = getVendorRatings();
-  const legRating = ratings.find(r => r.vendorId === vendor.id);
+  const legRating = allRatings.find(r => r.vendorId === vendor.id);
 
   return {
     vendorId: vendor.id,
@@ -668,13 +641,7 @@ function buildLegacyMetrics(vendor: Vendor, allPos: PurchaseOrder[], totalOrders
   };
 }
 
-/**
- * Build legacy risk from legacy metrics
- */
-function buildLegacyRisk(metrics: LegacySupplierMetrics): LegacySupplierRisk {
-  const vendors = getVendors();
-
-  // 1. Delivery Delay Risk (max 30)
+function buildLegacyRisk(metrics: LegacySupplierMetrics, vendors: Vendor[]): LegacySupplierRisk {
   let deliveryDelayRiskScore = 0;
   if (metrics.lateOrders === 1) deliveryDelayRiskScore += 8;
   else if (metrics.lateOrders === 2) deliveryDelayRiskScore += 15;
@@ -684,7 +651,6 @@ function buildLegacyRisk(metrics: LegacySupplierMetrics): LegacySupplierRisk {
   if (metrics.onTimeDeliveryRate < 80) deliveryDelayRiskScore += 3;
   deliveryDelayRiskScore = Math.min(deliveryDelayRiskScore, 30);
 
-  // 2. Lead Time Risk (max 20)
   let leadTimeRiskScore = 0;
   const avgLT = metrics.averageLeadTime;
   if (avgLT <= 7) leadTimeRiskScore = 0;
@@ -696,7 +662,6 @@ function buildLegacyRisk(metrics: LegacySupplierMetrics): LegacySupplierRisk {
   }
   leadTimeRiskScore = Math.min(leadTimeRiskScore, 20);
 
-  // 3. Supplier Dependency Risk (max 20)
   let supplierDependencyRiskScore = 0;
   const orderShare = metrics.supplierOrderShare;
   if (orderShare < 30) supplierDependencyRiskScore = 0;
@@ -712,7 +677,6 @@ function buildLegacyRisk(metrics: LegacySupplierMetrics): LegacySupplierRisk {
   }
   supplierDependencyRiskScore = Math.min(supplierDependencyRiskScore, 20);
 
-  // 4. Cost Concentration Risk (max 15)
   let costConcentrationRiskScore = 0;
   const spendShare = metrics.supplierSpendShare;
   if (spendShare < 25) costConcentrationRiskScore = 0;
@@ -721,7 +685,6 @@ function buildLegacyRisk(metrics: LegacySupplierMetrics): LegacySupplierRisk {
   else costConcentrationRiskScore = 15;
   costConcentrationRiskScore = Math.min(costConcentrationRiskScore, 15);
 
-  // 5. Supplier Performance Risk (max 15)
   let supplierPerformanceRiskScore = 0;
   if (metrics.vendorRatingOverall !== null || metrics.vendorRatingDelivery !== null) {
     if (metrics.vendorRatingOverall !== null) {
@@ -786,13 +749,11 @@ function buildLegacyRisk(metrics: LegacySupplierMetrics): LegacySupplierRisk {
   };
 }
 
-/**
- * Legacy function for backward compatibility with Delivery.tsx
- * Returns array of { metrics, risk } sorted by highest risk first
- */
-export function buildSupplierRiskData(): LegacySupplierRiskEntry[] {
-  const vendors = getVendors();
-  const allPos = getPurchaseOrders();
+export async function buildSupplierRiskData(): Promise<LegacySupplierRiskEntry[]> {
+  const vendors = await getVendors();
+  const allPos = await getPurchaseOrders();
+  const allRatings = await getVendorRatings();
+  const perfMap = await getDeliveryPerformance();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -802,9 +763,9 @@ export function buildSupplierRiskData(): LegacySupplierRiskEntry[] {
   const results: LegacySupplierRiskEntry[] = [];
 
   for (const vendor of vendors) {
-    const metrics = buildLegacyMetrics(vendor, allPos, totalOrders, totalSpend, today);
+    const metrics = buildLegacyMetrics(vendor, allPos, allRatings, perfMap, totalOrders, totalSpend, today);
     if (metrics) {
-      const risk = buildLegacyRisk(metrics);
+      const risk = buildLegacyRisk(metrics, vendors);
       results.push({ metrics, risk });
     }
   }

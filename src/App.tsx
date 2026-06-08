@@ -12,11 +12,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
 
   useEffect(() => {
-    try {
-      seedData();
-    } catch (e) {
-      console.error('seedData failed:', e);
-    }
+    seedData().catch((e) => console.error('seedData failed:', e));
   }, []);
 
   const navigate = setCurrentPage;

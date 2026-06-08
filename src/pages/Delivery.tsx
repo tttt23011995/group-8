@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { Chart } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -324,12 +324,19 @@ function DeliveryNotesPanel({
 // ── Main Component ────────────────────────────────────────────────────────
 
 export default function Delivery({ onNavigate }: { onNavigate?: (page: string) => void }) {
-  const [pos, setPos] = useState<PurchaseOrder[]>(() => getPurchaseOrders());
+  const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('earliest');
-  const [perf, setPerf] = useState<Record<string, DeliveryPerformance>>(() => getDeliveryPerformance());
+  const [perf, setPerf] = useState<Record<string, DeliveryPerformance>>({});
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    Promise.all([getPurchaseOrders(), getDeliveryPerformance()]).then(([p, d]) => {
+      setPos(p);
+      setPerf(d);
+    }).catch(() => {});
+  }, []);
 
   const isDeliveredOrLater = (po: PurchaseOrder) =>
     STATUS_ORDER.indexOf(po.status) >= STATUS_ORDER.indexOf('delivered');

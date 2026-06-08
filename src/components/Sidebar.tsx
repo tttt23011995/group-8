@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Truck, LayoutDashboard, Users, FileText, Truck as TruckIcon, BarChart3, ShieldAlert, Menu, Bell, AlertTriangle, Star, Clock } from 'lucide-react';
 import { getVendors, getPurchaseOrders } from '../lib/data';
 
@@ -24,9 +24,9 @@ const navItems = [
   { id: 'ai-risk', label: 'AI Risk', icon: ShieldAlert, emoji: '\uD83D\uDEE1\uFE0F' },
 ];
 
-function buildAlerts(): Alert[] {
-  const vendors = getVendors();
-  const pos = getPurchaseOrders();
+async function buildAlerts(): Promise<Alert[]> {
+  const vendors = await getVendors();
+  const pos = await getPurchaseOrders();
   const alerts: Alert[] = [];
   const now = Date.now();
 
@@ -72,9 +72,13 @@ function buildAlerts(): Alert[] {
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const bellRef = useRef<HTMLDivElement>(null);
 
-  const alerts = useMemo(() => buildAlerts(), []);
+  useEffect(() => {
+    buildAlerts().then(setAlerts).catch(() => {});
+  }, []);
+
   const badgeCount = alerts.length;
   const badgeLabel = badgeCount > 9 ? '9+' : String(badgeCount);
 

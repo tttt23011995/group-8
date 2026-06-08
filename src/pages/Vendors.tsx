@@ -2,8 +2,8 @@ import { useMemo, useState, useEffect } from 'react';
 import { Search, Plus, Mail, Clock, FileText, ChevronDown, CreditCard as Edit2, Trash2, X, AlertTriangle, Building2, Phone, MapPin, Calendar, Star, FileText as FileTextIcon, Download, StickyNote, Check, Scale, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { getVendors, saveVendors, Vendor, generateVendorCode, getPurchaseOrders, getVendorRatings, PurchaseOrder } from '../lib/data';
 
-function getOpenPOCount(vendor: Vendor): number {
-  const pos = getPurchaseOrders();
+async function getOpenPOCount(vendor: Vendor): Promise<number> {
+  const pos = await getPurchaseOrders();
   const vendorId = vendor.id;
   const vendorNameNorm = vendor.name.trim().toLowerCase();
 
@@ -113,8 +113,21 @@ const emptyForm: VendorFormData = {
 };
 
 export default function Vendors() {
-  const [vendors, setVendors] = useState<Vendor[]>(() => getVendors());
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    Promise.all([
+      getVendors(),
+      getPurchaseOrders(),
+    ]).then(([v, p]) => {
+      setVendors(v);
+      setPos(p);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [deletingVendor, setDeletingVendor] = useState<Vendor | null>(null);
@@ -183,7 +196,7 @@ export default function Vendors() {
     return Object.keys(errors).length === 0;
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!validateForm()) return;
 
     if (editingVendor) {
@@ -207,9 +220,10 @@ export default function Vendors() {
       setVendors(updated);
       saveVendors(updated);
     } else {
+      const vendorCode = await generateVendorCode();
       const newVendor: Vendor & { notes?: string } = {
         id: Math.random().toString(36).substring(2, 11),
-        vendorCode: generateVendorCode(),
+        vendorCode,
         name: form.name,
         contact: form.contact,
         email: form.email,
@@ -238,8 +252,8 @@ export default function Vendors() {
     setFormErrors({});
   }
 
-  function handleDelete(vendor: Vendor) {
-    const openPOs = getOpenPOCount(vendor);
+  async function handleDelete(vendor: Vendor) {
+    const openPOs = await getOpenPOCount(vendor);
     setDeletingVendor({ ...vendor, openPOCount: openPOs } as Vendor & { openPOCount: number });
   }
 
@@ -417,7 +431,11 @@ export default function Vendors() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((v) => {
-                const openPOCount = getOpenPOCount(v);
+                const openPOCount = pos.filter((po) => {
+                  const s = po.status?.trim().toLowerCase() || '';
+                  if (s === 'invoiced' || s === 'delivered') return false;
+                  return po.vendorId === v.id;
+                }).length;
                 const isSelected = compareIds.includes(v.id);
                 return (
                   <div
@@ -827,7 +845,16 @@ function CompareModal({
   vendorB: Vendor;
   onClose: () => void;
 }) {
-  const ratings = useMemo(() => getVendorRatings(), []);
+  const [ratings, setRatings] = useState<Awaited<ReturnType<typeof getVendorRatings>>>([]);
+  const [openPOsA, setOpenPOsA] = useState(0);
+  const [openPOsB, setOpenPOsB] = useState(0);
+
+  useEffect(() => {
+    getVendorRatings().then(setRatings).catch(() => {});
+    getOpenPOCount(vendorA).then(setOpenPOsA).catch(() => {});
+    getOpenPOCount(vendorB).then(setOpenPOsB).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vendorA.id, vendorB.id]);
 
   const ratingA = ratings.find((r) => r.vendorId === vendorA.id);
   const ratingB = ratings.find((r) => r.vendorId === vendorB.id);
@@ -838,9 +865,6 @@ function CompareModal({
   const avgB = ratingB
     ? Math.round((ratingB.quality + ratingB.delivery + ratingB.cost + ratingB.responsiveness) / 4)
     : null;
-
-  const openPOsA = getOpenPOCount(vendorA);
-  const openPOsB = getOpenPOCount(vendorB);
 
   const leadA = vendorA.leadTime || 7;
   const leadB = vendorB.leadTime || 7;
@@ -971,8 +995,13 @@ function VendorDetailPanel({
   onEdit: (v: Vendor) => void;
   onDelete: (v: Vendor) => void;
 }) {
-  const pos = useMemo(() => getPurchaseOrders(), []);
-  const ratings = useMemo(() => getVendorRatings(), []);
+  const [pos, setPos] = useState<PurchaseOrder[]>([]);
+  const [ratings, setRatings] = useState<Awaited<ReturnType<typeof getVendorRatings>>>([]);
+
+  useEffect(() => {
+    getPurchaseOrders().then(setPos).catch(() => {});
+    getVendorRatings().then(setRatings).catch(() => {});
+  }, []);
 
   const vendorPOs = pos.filter((po) => po.vendorId === vendor.id);
   const totalPOCount = vendorPOs.length;

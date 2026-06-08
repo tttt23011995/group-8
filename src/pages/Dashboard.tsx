@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Chart } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -12,7 +12,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Users, FileText, AlertTriangle, Star, TrendingUp, TrendingDown } from 'lucide-react';
-import { getVendors, getPurchaseOrders, getChartData } from '../lib/data';
+import { getVendors, getPurchaseOrders, getChartData, Vendor, PurchaseOrder } from '../lib/data';
 import { useAnimatedCounter } from '../lib/useAnimatedCounter';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend);
@@ -66,11 +66,19 @@ function KPICard({ label, mobileLabel, value, icon: Icon, borderColor, trend }: 
 }
 
 export default function Dashboard() {
-  const vendors = useMemo(() => getVendors(), []);
-  const pos = useMemo(() => getPurchaseOrders(), []);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [range, setRange] = useState<RangeOption>('6M');
+  const [chartPayload, setChartPayload] = useState<{ months: string[]; counts: number[]; spends: number[]; availableMonths: number }>({ months: [], counts: [], spends: [], availableMonths: 0 });
 
-  const chartPayload = useMemo(() => getChartData(rangeMonths[range]), [range]);
+  useEffect(() => {
+    getVendors().then(setVendors).catch(() => {});
+    getPurchaseOrders().then(setPos).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    getChartData(rangeMonths[range]).then(setChartPayload).catch(() => {});
+  }, [range]);
   const showAvailableNote = chartPayload.availableMonths < rangeMonths[range];
 
   const totalVendors = vendors.length;

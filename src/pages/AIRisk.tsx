@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ShieldAlert,
   AlertTriangle,
@@ -18,7 +18,7 @@ import {
   Key,
   Database,
 } from 'lucide-react';
-import { getVendors, Vendor, getPurchaseOrders, getVendorRatings, getDeliveryPerformance, getOpenPOCountForVendor } from '../lib/data';
+import { getVendors, Vendor, getOpenPOCountForVendor } from '../lib/data';
 import {
   buildSupplierRiskData,
   RiskCategory,
@@ -235,7 +235,7 @@ function saveAnalysis(analysis: SavedAnalysis): void {
 
 // ── Supplier context builder ──────────────────────────────────────────────
 
-function buildSupplierContext(entry: LegacySupplierRiskEntry): SupplierContext {
+async function buildSupplierContext(entry: LegacySupplierRiskEntry): Promise<SupplierContext> {
   const m: LegacySupplierMetrics = entry.metrics;
   const r: LegacySupplierRisk = entry.risk;
 
@@ -243,8 +243,7 @@ function buildSupplierContext(entry: LegacySupplierRiskEntry): SupplierContext {
   const lateOrders = safeNumber(m.lateOrders);
   const lateDeliveryRate = safeDivide(lateOrders, totalOrders) * 100;
 
-  // Use new risk engine for richer detectedRisks if available
-  const newRisk = getSupplierRisk(m.vendorId);
+  const newRisk = await getSupplierRisk(m.vendorId);
 
   const detectedRisks: SupplierContext['detectedRisks'] = newRisk
     ? newRisk.detectedRisks.map((dr) => ({
@@ -262,7 +261,7 @@ function buildSupplierContext(entry: LegacySupplierRiskEntry): SupplierContext {
         message: type,
       }));
 
-  const openPOCount = getOpenPOCountForVendor(m.vendorId);
+  const openPOCount = await getOpenPOCountForVendor(m.vendorId);
 
   return {
     vendorId: m.vendorId,
@@ -798,8 +797,15 @@ function ApiKeyManager({ onKeyChange }: { onKeyChange: () => void }) {
 // ── Main Component ────────────────────────────────────────────────────────
 
 export default function AIRisk() {
-  const vendors = useMemo(() => getVendors(), []);
-  const riskEntries = useMemo(() => buildSupplierRiskData(), []);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [riskEntries, setRiskEntries] = useState<LegacySupplierRiskEntry[]>([]);
+
+  useEffect(() => {
+    Promise.all([getVendors(), buildSupplierRiskData()]).then(([v, r]) => {
+      setVendors(v);
+      setRiskEntries(r);
+    }).catch(() => {});
+  }, []);
 
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [supplierCtx, setSupplierCtx] = useState<SupplierContext | null>(null);
@@ -839,7 +845,7 @@ export default function AIRisk() {
     };
   }, [loading]);
 
-  function handleVendorSelect(vendorId: string) {
+  async function handleVendorSelect(vendorId: string) {
     if (!vendorId) {
       setSelectedVendorId(null);
       setSupplierCtx(null);
@@ -851,7 +857,7 @@ export default function AIRisk() {
 
     const entry = riskEntries.find((e) => e.risk.vendorId === vendorId);
     if (entry) {
-      const ctx = buildSupplierContext(entry);
+      const ctx = await buildSupplierContext(entry);
       setSupplierCtx(ctx);
       setForm({
         vendorName: ctx.vendorName,

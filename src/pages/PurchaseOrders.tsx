@@ -8,6 +8,7 @@ import {
   LineItem,
   generatePONumber,
   CATALOG_ITEMS,
+  Vendor,
 } from '../lib/data';
 
 const statusColors: Record<string, string> = {
@@ -94,7 +95,8 @@ function formatMoney(n: number): string {
 }
 
 export default function PurchaseOrders() {
-  const [pos, setPos] = useState<PurchaseOrder[]>(() => getPurchaseOrders());
+  const [pos, setPos] = useState<PurchaseOrder[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterVendor, setFilterVendor] = useState<string>('all');
@@ -107,9 +109,15 @@ export default function PurchaseOrders() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [autocompleteOpen, setAutocompleteOpen] = useState<string | null>(null);
+  const [pendingPONumber, setPendingPONumber] = useState<string>('');
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const vendors = useMemo(() => getVendors(), []);
+  useEffect(() => {
+    Promise.all([getPurchaseOrders(), getVendors()]).then(([p, v]) => {
+      setPos(p);
+      setVendors(v);
+    }).catch(() => {});
+  }, []);
 
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -239,6 +247,7 @@ export default function PurchaseOrders() {
     setEditingPO(null);
     setForm(emptyForm());
     setValidationErrors({});
+    setPendingPONumber('');
   }
 
   function addLineItem() {
@@ -296,7 +305,7 @@ export default function PurchaseOrders() {
     }
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!validateForm()) return;
 
     const validItems = form.lineItems.filter(
@@ -337,9 +346,10 @@ export default function PurchaseOrders() {
       setPos(updated);
       savePurchaseOrders(updated);
     } else {
+      const poNumber = pendingPONumber || await generatePONumber();
       const newPO: PurchaseOrder = {
         id: Math.random().toString(36).substring(2, 11),
-        poNumber: generatePONumber(),
+        poNumber,
         vendorId: form.vendorId,
         vendorName: vendor.name,
         date: new Date().toISOString().slice(0, 10),
@@ -403,10 +413,11 @@ export default function PurchaseOrders() {
     };
   }, [pos]);
 
-  function handleDuplicatePO(po: PurchaseOrder) {
+  async function handleDuplicatePO(po: PurchaseOrder) {
+    const poNumber = await generatePONumber();
     const newPO: PurchaseOrder = {
       id: Math.random().toString(36).substring(2, 11),
-      poNumber: generatePONumber(),
+      poNumber,
       vendorId: po.vendorId,
       vendorName: po.vendorName,
       date: new Date().toISOString().slice(0, 10),
@@ -466,6 +477,7 @@ export default function PurchaseOrders() {
           onClick={() => {
             setEditingPO(null);
             setForm(emptyForm());
+            generatePONumber().then(setPendingPONumber).catch(() => {});
             setShowForm(true);
           }}
           className="relative z-2 flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-blue-900/20"
@@ -632,7 +644,7 @@ export default function PurchaseOrders() {
               <div>
                 <label className="block text-sm text-slate-400 mb-1.5">PO Number</label>
                 <div className="px-4 py-2.5 bg-navy-700/50 border border-blue-900/30 rounded-lg text-blue-400 font-mono text-sm select-all">
-                  {editingPO ? editingPO.poNumber : generatePONumber()}
+                  {editingPO ? editingPO.poNumber : pendingPONumber || '—'}
                 </div>
               </div>
 
