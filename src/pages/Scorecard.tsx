@@ -37,7 +37,6 @@ import {
   buildSupplierRiskData,
   SupplierRiskEntry,
   SupplierRisk,
-  SupplierMetrics,
 } from '../lib/supplierRisk';
 
 ChartJS.register(
@@ -95,7 +94,7 @@ interface KPIData {
 
 function computeKPIData(riskData: SupplierRiskEntry[], pos: PurchaseOrder[]): KPIData {
   const totalVendors = riskData.length;
-  const highRiskVendors = riskData.filter(r => r.risk.overallRiskScore >= 70).length;
+  const highRiskVendors = riskData.filter(r => r.risk.riskLevel === 'High').length;
 
   const delivered = pos.filter(p => p.status === 'delivered' || p.status === 'invoiced');
   const perfMap = getDeliveryPerformance();
@@ -154,8 +153,8 @@ function KPICards({ data }: { data: KPIData }) {
 function RiskDistributionChart({ data }: { data: SupplierRiskEntry[] }) {
   const counts = { low: 0, medium: 0, high: 0 };
   data.forEach(({ risk }) => {
-    if (risk.overallRiskScore < 40) counts.low++;
-    else if (risk.overallRiskScore < 70) counts.medium++;
+    if (risk.riskLevel === 'Low') counts.low++;
+    else if (risk.riskLevel === 'Medium') counts.medium++;
     else counts.high++;
   });
 
@@ -557,6 +556,7 @@ function VendorDetailPanel({
           { label: 'Delivery Delay', score: risk.deliveryDelayRiskScore, max: 30 },
           { label: 'Lead Time', score: risk.leadTimeRiskScore, max: 20 },
           { label: 'Dependency', score: risk.supplierDependencyRiskScore, max: 20 },
+          { label: 'Cost Concentration', score: risk.costConcentrationRiskScore, max: 15 },
           { label: 'Performance', score: risk.supplierPerformanceRiskScore, max: 15 },
         ].map((rb) => (
           <div key={rb.label}>

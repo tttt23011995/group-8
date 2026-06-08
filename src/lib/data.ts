@@ -698,9 +698,41 @@ export function seedData(): void {
     { vendorId: vendors[11].id, quality: 55, delivery: 58, cost: 60, responsiveness: 54, overall: 57 },
   ];
 
+  // Seed delivery performance for delivered/invoiced POs
+  const perfMap: Record<string, DeliveryPerformance> = {};
+  purchaseOrders.forEach((po, idx) => {
+    if (po.status !== 'delivered' && po.status !== 'invoiced') return;
+    const vendorIdx = vendors.findIndex((v) => v.id === po.vendorId);
+
+    if (vendorIdx === 4) {
+      // NanoChem Labs (score 55): ~50% late
+      const isLate = idx % 2 === 0;
+      perfMap[po.id] = { onTime: !isLate, daysDifference: isLate ? 3 + (idx % 5) : 0 };
+    } else if (vendorIdx === 8) {
+      // SilicaSource Group (score 62): ~40% late
+      const isLate = idx % 5 === 0 || idx % 5 === 2;
+      perfMap[po.id] = { onTime: !isLate, daysDifference: isLate ? 2 + (idx % 4) : 0 };
+    } else if (vendorIdx === 11) {
+      // BoxCraft Industries (score 57): ~40% late
+      const isLate = idx % 5 === 0 || idx % 5 === 3;
+      perfMap[po.id] = { onTime: !isLate, daysDifference: isLate ? 2 + (idx % 3) : 0 };
+    } else if (vendorIdx === 2) {
+      // PetroChem Industries (score 71): 1 late
+      const isLate = idx === 2;
+      perfMap[po.id] = { onTime: !isLate, daysDifference: isLate ? 3 : 0 };
+    } else if (vendorIdx === 3) {
+      // SteelPeak Logistics (score 48): 1 late
+      const isLate = idx === 3;
+      perfMap[po.id] = { onTime: !isLate, daysDifference: isLate ? 2 : 0 };
+    } else {
+      perfMap[po.id] = { onTime: true, daysDifference: 0 };
+    }
+  });
+
   localStorage.setItem(VENDOR_KEY, JSON.stringify(vendors));
   localStorage.setItem(PO_KEY, JSON.stringify(purchaseOrders));
   localStorage.setItem(RATING_KEY, JSON.stringify(vendorRatings));
+  saveDeliveryPerformance(perfMap);
 }
 
 export function getVendors(): Vendor[] {
@@ -805,7 +837,12 @@ export function generateVendorCode(): string {
 
 export function getOpenPOCountForVendor(vendorId: string): number {
   const pos = getPurchaseOrders();
-  return pos.filter((po) => po.vendorId === vendorId && po.status !== 'delivered').length;
+  return pos.filter(
+    (po) =>
+      po.vendorId === vendorId &&
+      po.status !== 'delivered' &&
+      po.status !== 'invoiced'
+  ).length;
 }
 
 export function generatePONumber(): string {
