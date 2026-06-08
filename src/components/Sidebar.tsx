@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Truck, LayoutDashboard, Users, FileText, Truck as TruckIcon, BarChart3, ShieldAlert, Menu, Bell, AlertTriangle, Star, Clock } from 'lucide-react';
+import { Truck, LayoutDashboard, Users, FileText, Truck as TruckIcon, BarChart3, ShieldAlert, Menu, Bell, AlertTriangle, Star, Clock, Sun, Moon } from 'lucide-react';
 import { getVendors, getPurchaseOrders } from '../lib/data';
+import { useTheme } from '../lib/ThemeContext';
 
 interface SidebarProps {
   currentPage: string;
@@ -74,6 +75,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [bellOpen, setBellOpen] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const bellRef = useRef<HTMLDivElement>(null);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     buildAlerts().then(setAlerts).catch(() => {});
@@ -183,6 +185,20 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             <span className="text-blue-400">Procure</span>AI
           </span>
         </div>
+        <div className="ml-auto flex items-center">
+          <button
+            onClick={toggleTheme}
+            className="theme-toggle"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            style={{ minHeight: 44, minWidth: 44 }}
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Overlay — CSS-driven via sidebar-open class, never uses opacity/visibility */}
@@ -202,6 +218,18 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             </span>
           </div>
           <div className="flex items-center gap-1">
+            <button
+              onClick={toggleTheme}
+              className="theme-toggle"
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              style={{ minHeight: 44, minWidth: 44 }}
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </button>
             {bellButton}
           </div>
         </div>
