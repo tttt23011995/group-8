@@ -2,61 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── CSS Variables: Liquid Glass Theme ───────────────────────────────────── */
-:root {
-  /* Dark mode (default) - Premium deep navy */
-  --bg: #040810;
-  --bg-soft: #0a1424;
-  --glass: rgba(12, 35, 64, 0.55);
-  --glass-strong: rgba(16, 45, 80, 0.75);
-  --glass-solid: rgba(8, 20, 40, 0.88);
-  --border: rgba(100, 160, 220, 0.18);
-  --border-strong: rgba(120, 180, 240, 0.28);
-  --border-inner: rgba(255, 255, 255, 0.06);
-  --highlight: rgba(255, 255, 255, 0.08);
-  --text: #EEF4FF;
-  --text-secondary: #A8BBDA;
-  --text-muted: #6E82A0;
-  --accent: #4A9EFF;
-  --accent-hover: #6CB0FF;
-  --cyan: #5CD9F0;
-  --success: #2DD4A0;
-  --warning: #F5B030;
-  --danger: #F87185;
-  --card-radius: 24px;
-  --modal-radius: 28px;
-  --blur: 22px;
-  --blur-strong: 28px;
-  --transition: 220ms;
-  --easing: cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* Light mode - Soft white/blue frosted glass */
-html.light-mode {
-  --bg: #F0F6FC;
-  --bg-soft: #E4EDF8;
-  --glass: rgba(255, 255, 255, 0.68);
-  --glass-strong: rgba(255, 255, 255, 0.82);
-  --glass-solid: rgba(255, 255, 255, 0.92);
-  --border: rgba(60, 100, 160, 0.16);
-  --border-strong: rgba(60, 100, 160, 0.26);
-  --border-inner: rgba(0, 0, 0, 0.04);
-  --highlight: rgba(255, 255, 255, 0.9);
-  --text: #0C1E32;
-  --text-secondary: #3A4E68;
-  --text-muted: #5C7088;
-  --accent: #1E5FD4;
-  --accent-hover: #2E78F0;
-  --cyan: #0A8AAA;
-  --success: #0A8058;
-  --warning: #A06408;
-  --danger: #C42020;
-}
-
 @layer base {
   body {
-    background-color: var(--bg);
-    color: var(--text);
+    background-color: #0a1628;
+    color: #e2e8f0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -64,7 +13,7 @@ html.light-mode {
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--border-strong) var(--bg);
+    scrollbar-color: #1e3a5f #0a1628;
   }
 
   *::-webkit-scrollbar {
@@ -73,467 +22,78 @@ html.light-mode {
   }
 
   *::-webkit-scrollbar-track {
-    background: var(--bg);
+    background: #0a1628;
   }
 
   *::-webkit-scrollbar-thumb {
-    background: var(--border-strong);
+    background: #1e3a5f;
     border-radius: 3px;
-  }
-
-  *:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
   }
 }
 
-/* ── Liquid Glass Components ────────────────────────────────────────────── */
 @layer components {
-  /* Base glass surface with iOS-style frosted look */
-  .glass {
-    background: var(--glass);
-    backdrop-filter: blur(var(--blur)) saturate(1.4);
-    -webkit-backdrop-filter: blur(var(--blur)) saturate(1.4);
-    border: 1px solid var(--border);
-    position: relative;
-  }
-
-  .glass::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(
-      135deg,
-      var(--highlight) 0%,
-      transparent 40%,
-      transparent 100%
-    );
-    pointer-events: none;
-  }
-
-  .glass::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    box-shadow: inset 0 1px 1px var(--border-inner);
-    pointer-events: none;
-  }
-
-  .glass-strong {
-    background: var(--glass-strong);
-    backdrop-filter: blur(var(--blur-strong)) saturate(1.5);
-    -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.5);
-    border: 1px solid var(--border-strong);
-  }
-
-  /* Glass cards - elevated floating surfaces */
-  .glass-card {
-    background: var(--glass-strong);
-    backdrop-filter: blur(var(--blur-strong)) saturate(1.4);
-    -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.4);
-    border: 1px solid var(--border);
-    border-radius: var(--card-radius);
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.04),
-      0 4px 16px rgba(0, 0, 0, 0.08),
-      0 8px 32px rgba(0, 0, 0, 0.06),
-      inset 0 1px 0 var(--highlight);
+  .card,
+  .kpi-card {
     position: relative;
     z-index: 1;
-    transition:
-      transform var(--transition) var(--easing),
-      box-shadow var(--transition) var(--easing),
-      border-color var(--transition) var(--easing);
-  }
-
-  .glass-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 50%;
-    height: 1px;
-    background: linear-gradient(90deg, var(--highlight), transparent);
-    border-radius: var(--card-radius) var(--card-radius) 0 0;
-    z-index: 1;
-  }
-
-  .glass-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    box-shadow: inset 0 1px 1px var(--border-inner);
-    pointer-events: none;
-  }
-
-  .glass-card:hover {
-    border-color: var(--border-strong);
-    box-shadow:
-      0 2px 4px rgba(0, 0, 0, 0.04),
-      0 8px 24px rgba(0, 0, 0, 0.1),
-      0 16px 48px rgba(0, 0, 0, 0.08),
-      inset 0 1px 0 var(--highlight);
-    transform: translateY(-2px);
-  }
-
-  /* KPI cards */
-  .kpi-card,
-  .card {
-    background: var(--glass-strong);
-    backdrop-filter: blur(var(--blur-strong)) saturate(1.4);
-    -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.4);
-    border: 1px solid var(--border);
-    border-radius: var(--card-radius);
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.04),
-      0 4px 12px rgba(0, 0, 0, 0.06),
-      inset 0 1px 0 var(--highlight);
-    position: relative;
-    z-index: 1;
-    transition:
-      transform var(--transition) var(--easing),
-      box-shadow var(--transition) var(--easing),
-      border-color var(--transition) var(--easing);
-  }
-
-  .kpi-card::before,
-  .card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 40%;
-    height: 1px;
-    background: linear-gradient(90deg, var(--highlight), transparent);
-    z-index: 1;
-  }
-
-  .kpi-card::after,
-  .card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    box-shadow: inset 0 1px 1px var(--border-inner);
-    pointer-events: none;
-  }
-
-  .kpi-card:hover,
-  .card:hover {
-    border-color: var(--border-strong);
-    box-shadow:
-      0 2px 4px rgba(0, 0, 0, 0.04),
-      0 6px 20px rgba(0, 0, 0, 0.08),
-      inset 0 1px 0 var(--highlight);
-    transform: translateY(-1px);
-  }
-
-  /* Overdue/danger card style */
-  .glass-card-overdue {
-    background: color-mix(in srgb, var(--danger) 8%, var(--glass-strong));
-    backdrop-filter: blur(var(--blur)) saturate(1.3);
-    -webkit-backdrop-filter: blur(var(--blur)) saturate(1.3);
-    border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
-    border-radius: var(--card-radius);
-    box-shadow:
-      0 4px 20px rgba(248, 113, 133, 0.1),
-      inset 0 1px 0 var(--highlight);
-    position: relative;
-  }
-
-  /* Glass panels for content areas - more solid for readability */
-  .glass-panel {
-    background: var(--glass-solid);
-    backdrop-filter: blur(var(--blur-strong)) saturate(1.2);
-    -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.2);
-    border: 1px solid var(--border);
-    border-radius: var(--card-radius);
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.03),
-      0 2px 8px rgba(0, 0, 0, 0.04),
-      inset 0 1px 0 var(--highlight);
-  }
-
-  /* Sidebar glass */
-  .glass-nav {
-    background: var(--glass-strong);
-    backdrop-filter: blur(var(--blur-strong)) saturate(1.4);
-    -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.4);
-    border-right: 1px solid var(--border);
-  }
-
-  /* Input fields - glass capsule style */
-  .glass-input {
-    background: var(--glass);
-    backdrop-filter: blur(18px) saturate(1.3);
-    -webkit-backdrop-filter: blur(18px) saturate(1.3);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--text);
-    min-height: 44px;
-    transition:
-      border-color var(--transition) var(--easing),
-      box-shadow var(--transition) var(--easing),
-      background var(--transition) var(--easing);
-    position: relative;
-  }
-
-  .glass-input::placeholder {
-    color: var(--text-muted);
-    opacity: 1;
-  }
-
-  .glass-input:focus {
-    border-color: var(--accent);
-    box-shadow:
-      0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent),
-      inset 0 1px 0 var(--highlight);
-    outline: none;
-    background: var(--glass-strong);
-  }
-
-  /* Glass capsule buttons */
-  .glass-btn {
-    background: var(--glass);
-    backdrop-filter: blur(16px) saturate(1.2);
-    -webkit-backdrop-filter: blur(16px) saturate(1.2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--text-secondary);
-    font-weight: 600;
-    min-height: 44px;
-    transition:
-      background var(--transition) var(--easing),
-      border-color var(--transition) var(--easing),
-      color var(--transition) var(--easing),
-      transform 120ms var(--easing),
-      box-shadow var(--transition) var(--easing);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .glass-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, var(--highlight), transparent 60%);
-    opacity: 0;
-    transition: opacity var(--transition) var(--easing);
-    pointer-events: none;
-  }
-
-  .glass-btn::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    box-shadow: inset 0 1px 1px var(--border-inner);
-    pointer-events: none;
-  }
-
-  .glass-btn:hover {
-    border-color: var(--border-strong);
-    color: var(--text);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  }
-
-  .glass-btn:hover::before {
-    opacity: 1;
-  }
-
-  .glass-btn:active {
-    transform: scale(0.97);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  }
-
-  /* Primary action button - vibrant glass */
-  .glass-btn-primary {
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--accent) 95%, #000),
-      color-mix(in srgb, var(--accent) 80%, #000)
-    );
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #fff;
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.1),
-      0 4px 16px color-mix(in srgb, var(--accent) 25%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
-  }
-
-  .glass-btn-primary:hover {
-    background: linear-gradient(135deg, var(--accent-hover), var(--accent));
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.12),
-      0 6px 20px color-mix(in srgb, var(--accent) 30%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-
-  /* Modal/overlay - highest layer glass */
-  .glass-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.38);
-    backdrop-filter: blur(12px) saturate(1.2);
-    -webkit-backdrop-filter: blur(12px) saturate(1.2);
-    z-index: 1000;
-  }
-
-  html.light-mode .glass-overlay {
-    background: rgba(15, 30, 50, 0.28);
-  }
-
-  /* Modal container - premium frosted glass */
-  .glass-modal {
-    background: var(--glass-solid);
-    backdrop-filter: blur(var(--blur-strong)) saturate(1.5);
-    -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.5);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--modal-radius);
-    box-shadow:
-      0 2px 4px rgba(0, 0, 0, 0.04),
-      0 8px 32px rgba(0, 0, 0, 0.12),
-      0 32px 64px rgba(0, 0, 0, 0.16),
-      inset 0 1px 0 var(--highlight),
-      inset 0 0 0 1px var(--border-inner);
-    position: relative;
-    z-index: 1001;
-    max-height: 90vh;
-    overflow: hidden;
-  }
-
-  .glass-modal-content {
-    overflow-y: auto;
-    max-height: calc(90vh - 80px);
-  }
-
-  /* Dropdowns */
-  .glass-dropdown {
-    background: var(--glass-solid);
-    backdrop-filter: blur(var(--blur-strong)) saturate(1.4);
-    -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.4);
-    border: 1px solid var(--border-strong);
-    border-radius: 16px;
-    box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.1),
-      0 16px 48px rgba(0, 0, 0, 0.12),
-      inset 0 1px 0 var(--highlight);
-    z-index: 900;
-  }
-
-  /* Sidebar nav items - glass capsule style */
-  .nav-item {
-    border-radius: 12px;
-    background: transparent;
-    transition:
-      background var(--transition) var(--easing),
-      color var(--transition) var(--easing),
-      box-shadow var(--transition) var(--easing);
-    position: relative;
-  }
-
-  .nav-item:hover {
-    background: var(--glass);
-    box-shadow: inset 0 1px 0 var(--highlight);
-  }
-
-  .nav-item-active {
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-    color: var(--accent) !important;
-    border-left: 3px solid var(--accent) !important;
-    box-shadow:
-      inset 0 1px 0 var(--highlight),
-      0 2px 8px color-mix(in srgb, var(--accent) 8%, transparent);
-  }
-
-  .nav-item-active:hover {
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-  }
-
-  /* Theme toggle */
-  .theme-toggle {
-    background: var(--glass);
-    backdrop-filter: blur(14px) saturate(1.2);
-    -webkit-backdrop-filter: blur(14px) saturate(1.2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    transition:
-      background var(--transition) var(--easing),
-      border-color var(--transition) var(--easing),
-      box-shadow var(--transition) var(--easing);
-    box-shadow: inset 0 1px 0 var(--highlight);
-  }
-
-  .theme-toggle:hover {
-    border-color: var(--border-strong);
-    background: var(--glass-strong);
-    box-shadow:
-      inset 0 1px 0 var(--highlight),
-      0 2px 8px rgba(0, 0, 0, 0.06);
   }
 }
 
 @layer utilities {
   .sidebar-transition {
-    transition: transform 0.3s var(--easing);
+    transition: transform 0.3s ease;
   }
 }
 
-/* ── Sidebar ────────────────────────────────────────────────────────────── */
+/* ── Sidebar: always off-canvas by default, slides in on mobile ─────────── */
 .sidebar {
-  transition: transform 0.3s var(--easing);
-  background: var(--glass-strong);
-  backdrop-filter: blur(var(--blur-strong)) saturate(1.4);
-  -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.4);
+  transition: transform 0.3s ease;
 }
 
-/* Mobile overlay */
+/* Overlay: hidden by default using display:none so it never blocks clicks */
 .mobile-overlay {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 999;
-  background: rgba(0, 0, 0, 0.38);
-  backdrop-filter: blur(10px) saturate(1.2);
-  -webkit-backdrop-filter: blur(10px) saturate(1.2);
-}
-
-html.light-mode .mobile-overlay {
-  background: rgba(15, 30, 50, 0.28);
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.5);
 }
 
 @media (max-width: 767px) {
+  /* Sidebar off-canvas */
   .sidebar {
     transform: translateX(-220px);
   }
 
+  /* Main content: no left margin on mobile */
   .main-content {
     margin-left: 0 !important;
     padding-top: 56px;
   }
 
+  /* Page inner padding */
   .main-content > div {
     padding-left: 16px !important;
     padding-right: 16px !important;
   }
 
+  /* KPI grid: 1-col on mobile */
   .kpi-grid {
     grid-template-columns: 1fr;
     gap: 12px;
   }
 
+  /* KPI card padding */
   .kpi-inner {
     padding: 14px 14px 14px 18px !important;
   }
 
+  /* KPI number: fluid size */
   .kpi-value {
     font-size: clamp(1.4rem, 4vw, 1.8rem) !important;
   }
 
+  /* KPI label: allow wrapping on mobile */
   .kpi-label {
     font-size: 11px !important;
     white-space: normal;
@@ -541,24 +101,29 @@ html.light-mode .mobile-overlay {
     text-overflow: clip;
   }
 
+  /* Chart container: fixed height on mobile */
   .chart-wrapper {
     width: 100%;
     overflow: hidden;
     height: 200px;
   }
 
+  /* Chart axis ticks: smaller font on mobile */
   .chart-wrapper canvas {
     max-height: 200px;
   }
 
+  /* All body text minimum 13px */
   p, span, td, th, li, label {
     font-size: max(13px, 1em);
   }
 
+  /* Section headings minimum 15px */
   h1, h2, h3, h4 {
     font-size: max(15px, 1em);
   }
 
+  /* All tappable elements: 44px touch targets */
   button, a[href], [role="button"] {
     min-height: 44px;
     pointer-events: auto;
@@ -567,23 +132,13 @@ html.light-mode .mobile-overlay {
   }
 }
 
+/* Sidebar open: slides in, overlay visible */
 html.sidebar-open .sidebar {
   transform: translateX(0);
 }
 
 html.sidebar-open .mobile-overlay {
   display: block;
-}
-
-/* ── Motion Preferences ──────────────────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
 }
 
 /* ── Print styles ─────────────────────────────────────────────────────── */
@@ -595,15 +150,18 @@ html.sidebar-open .mobile-overlay {
     padding: 0 !important;
   }
 
+  /* Hide everything */
   body[data-printing="po"] * {
     visibility: hidden;
   }
 
+  /* Reveal only the PO document and all its descendants */
   body[data-printing="po"] .po-document,
   body[data-printing="po"] .po-document * {
     visibility: visible;
   }
 
+  /* Position the PO document to fill the printed page */
   body[data-printing="po"] .po-document {
     position: fixed;
     top: 0;
@@ -617,6 +175,7 @@ html.sidebar-open .mobile-overlay {
     box-shadow: none !important;
   }
 
+  /* Table formatting */
   .po-document table {
     border-collapse: collapse !important;
     width: 100% !important;
@@ -636,6 +195,7 @@ html.sidebar-open .mobile-overlay {
     page-break-inside: avoid !important;
   }
 
+  /* Preserve color for blue header row and grand total row */
   .po-document thead th,
   .po-document .bg-blue-600 {
     -webkit-print-color-adjust: exact !important;
@@ -653,405 +213,8 @@ html.sidebar-open .mobile-overlay {
     font-size: 12px !important;
   }
 
+  /* Shrink sidebar emoji icons slightly */
   .sidebar nav button span:first-child {
     font-size: 18px;
   }
-}
-
-/* ── Utility Classes ────────────────────────────────────────────────────── */
-.text-theme { color: var(--text); }
-.text-theme-secondary { color: var(--text-secondary); }
-.text-theme-muted { color: var(--text-muted); }
-.text-theme-accent { color: var(--accent); }
-.text-theme-success { color: var(--success); }
-.text-theme-warning { color: var(--warning); }
-.text-theme-danger { color: var(--danger); }
-
-.bg-theme { background-color: var(--bg); }
-.bg-theme-soft { background-color: var(--bg-soft); }
-.bg-theme-glass { background: var(--glass); }
-
-.border-theme { border-color: var(--border); }
-.border-theme-strong { border-color: var(--border-strong); }
-
-/* ── Backwards-Compatible Styling ────────────────────────────────────────── */
-@layer components {
-  /* Panel backgrounds */
-  .glass-panel,
-  .bg-navy-800 {
-    background: var(--glass-solid) !important;
-    backdrop-filter: blur(var(--blur-strong)) saturate(1.2);
-    -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.2);
-    border-color: var(--border) !important;
-    position: relative;
-  }
-
-  .glass-panel::before,
-  .bg-navy-800::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 35%;
-    height: 1px;
-    background: linear-gradient(90deg, var(--highlight), transparent);
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  .bg-navy-700 {
-    background: var(--glass-strong) !important;
-    backdrop-filter: blur(18px) saturate(1.2);
-    -webkit-backdrop-filter: blur(18px) saturate(1.2);
-    border-color: var(--border) !important;
-  }
-
-  /* Text colors - ensuring readability in both themes */
-  .text-white {
-    color: var(--text) !important;
-  }
-
-  .text-slate-300 {
-    color: var(--text-secondary) !important;
-  }
-
-  .text-slate-400 {
-    color: var(--text-secondary) !important;
-  }
-
-  .text-slate-500 {
-    color: var(--text-muted) !important;
-  }
-
-  .text-slate-600 {
-    color: var(--text-muted) !important;
-  }
-
-  /* Borders */
-  .border-blue-900\/40,
-  .border-blue-900\/30,
-  .border-blue-900\/20 {
-    border-color: var(--border) !important;
-  }
-
-  /* Accent colors */
-  .text-blue-400 {
-    color: var(--accent) !important;
-  }
-
-  .text-blue-500 {
-    color: var(--accent) !important;
-  }
-
-  /* Primary buttons */
-  .bg-blue-600 {
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--accent) 95%, #000),
-      color-mix(in srgb, var(--accent) 82%, #000)
-    ) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.08),
-      0 4px 16px color-mix(in srgb, var(--accent) 22%, transparent) !important;
-    color: #fff !important;
-  }
-
-  .bg-blue-600:hover {
-    background: linear-gradient(135deg, var(--accent-hover), var(--accent)) !important;
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.1),
-      0 6px 20px color-mix(in srgb, var(--accent) 28%, transparent) !important;
-  }
-
-  .hover\:bg-blue-500:hover {
-    background: var(--accent-hover) !important;
-  }
-
-  /* Status colors */
-  .text-emerald-400,
-  .text-emerald-500 {
-    color: var(--success) !important;
-  }
-
-  .text-amber-400,
-  .text-orange-400 {
-    color: var(--warning) !important;
-  }
-
-  .text-yellow-400 {
-    color: var(--warning) !important;
-  }
-
-  .text-red-400,
-  .text-red-500 {
-    color: var(--danger) !important;
-  }
-
-  /* Form inputs - ensuring visibility */
-  input[type="text"],
-  input[type="email"],
-  input[type="tel"],
-  input[type="number"],
-  input[type="date"],
-  input[type="search"],
-  select,
-  textarea {
-    background: var(--glass-strong) !important;
-    backdrop-filter: blur(16px) saturate(1.2);
-    -webkit-backdrop-filter: blur(16px) saturate(1.2);
-    border: 1px solid var(--border) !important;
-    color: var(--text) !important;
-    min-height: 44px;
-  }
-
-  input[type="text"]::placeholder,
-  input[type="email"]::placeholder,
-  input[type="tel"]::placeholder,
-  input[type="search"]::placeholder,
-  textarea::placeholder {
-    color: var(--text-muted) !important;
-    opacity: 1 !important;
-  }
-
-  input:focus,
-  select:focus,
-  textarea:focus {
-    border-color: var(--accent) !important;
-    box-shadow:
-      0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent) !important;
-    outline: none !important;
-  }
-
-  /* Tables */
-  table thead tr {
-    background: var(--glass-strong) !important;
-  }
-
-  table tbody tr:hover {
-    background: color-mix(in srgb, var(--text) 3%, transparent) !important;
-  }
-
-  /* Modal containers - must cover everything */
-  .fixed.inset-0[class*="z-"] {
-    z-index: 1000 !important;
-  }
-
-  .fixed.inset-0.z-\[200\] {
-    z-index: 1000 !important;
-  }
-
-  .fixed.inset-0.z-\[200\] > .absolute.inset-0,
-  .fixed.inset-0.z-\[200\] > .bg-black\/60 {
-    z-index: 1000 !important;
-    background: rgba(0, 0, 0, 0.38) !important;
-    backdrop-filter: blur(12px) saturate(1.2) !important;
-    -webkit-backdrop-filter: blur(12px) saturate(1.2) !important;
-  }
-
-  html.light-mode .fixed.inset-0.z-\[200\] > .absolute.inset-0,
-  html.light-mode .fixed.inset-0.z-\[200\] > .bg-black\/60 {
-    background: rgba(15, 30, 50, 0.28) !important;
-  }
-
-  /* Modal content panels */
-  .fixed.inset-0.z-\[200\] > .relative.z-10 {
-    z-index: 1001 !important;
-    background: var(--glass-solid) !important;
-    backdrop-filter: blur(var(--blur-strong)) saturate(1.5) !important;
-    -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.5) !important;
-    border-color: var(--border-strong) !important;
-    color: var(--text) !important;
-  }
-
-  /* Side panels */
-  .fixed.inset-0.z-\[200\] > .absolute.right-0 {
-    z-index: 1001 !important;
-    background: var(--glass-solid) !important;
-    backdrop-filter: blur(var(--blur-strong)) saturate(1.5) !important;
-    -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.5) !important;
-    border-left: 1px solid var(--border-strong) !important;
-  }
-
-  /* Card hover */
-  .hover\:shadow-blue-900\/20:hover {
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.12),
-      inset 0 1px 0 var(--highlight) !important;
-  }
-
-  .hover\:border-blue-800\/60:hover {
-    border-color: var(--border-strong) !important;
-  }
-
-  /* Icon containers */
-  .bg-blue-500\/10,
-  .bg-blue-500\/15 {
-    background: color-mix(in srgb, var(--accent) 12%, transparent) !important;
-  }
-
-  .bg-emerald-500\/10,
-  .bg-emerald-500\/15 {
-    background: color-mix(in srgb, var(--success) 12%, transparent) !important;
-  }
-
-  .bg-red-500\/10,
-  .bg-red-500\/15 {
-    background: color-mix(in srgb, var(--danger) 12%, transparent) !important;
-  }
-
-  .bg-amber-500\/10,
-  .bg-amber-500\/15 {
-    background: color-mix(in srgb, var(--warning) 12%, transparent) !important;
-  }
-
-  .bg-orange-500\/10 {
-    background: color-mix(in srgb, var(--warning) 12%, transparent) !important;
-  }
-
-  .bg-purple-500\/10 {
-    background: color-mix(in srgb, #8B5CF6 12%, transparent) !important;
-  }
-
-  .bg-violet-500\/15 {
-    background: color-mix(in srgb, #8B5CF6 12%, transparent) !important;
-  }
-
-  /* Status badges */
-  .bg-emerald-500\/20 {
-    background: color-mix(in srgb, var(--success) 15%, transparent) !important;
-    color: var(--success) !important;
-  }
-
-  .bg-amber-500\/20,
-  .bg-yellow-500\/20 {
-    background: color-mix(in srgb, var(--warning) 15%, transparent) !important;
-    color: var(--warning) !important;
-  }
-
-  .bg-red-500\/20 {
-    background: color-mix(in srgb, var(--danger) 15%, transparent) !important;
-    color: var(--danger) !important;
-  }
-
-  .bg-blue-500\/20 {
-    background: color-mix(in srgb, var(--accent) 15%, transparent) !important;
-    color: var(--accent) !important;
-  }
-
-  /* Border colors */
-  .border-emerald-500\/30 {
-    border-color: color-mix(in srgb, var(--success) 30%, transparent) !important;
-  }
-
-  .border-amber-500\/30 {
-    border-color: color-mix(in srgb, var(--warning) 30%, transparent) !important;
-  }
-
-  .border-red-500\/30,
-  .border-red-500\/25 {
-    border-color: color-mix(in srgb, var(--danger) 30%, transparent) !important;
-  }
-
-  .border-blue-500\/30,
-  .border-blue-500\/25 {
-    border-color: color-mix(in srgb, var(--accent) 30%, transparent) !important;
-  }
-
-  .border-violet-500\/25 {
-    border-color: color-mix(in srgb, #8B5CF6 25%, transparent) !important;
-  }
-
-  /* Red/overdue backgrounds */
-  .bg-red-500\/5 {
-    background: color-mix(in srgb, var(--danger) 6%, transparent) !important;
-  }
-
-  /* Shadow fixes for overdue cards */
-  .shadow-\[0_0_24px_-6px_rgba\(239\,68\,68\,0\.15\)\] {
-    box-shadow:
-      0 0 24px -6px color-mix(in srgb, var(--danger) 15%, transparent),
-      inset 0 1px 0 var(--highlight) !important;
-  }
-
-  /* Compare bar */
-  .fixed.bottom-6.left-1\/2 {
-    z-index: 1002 !important;
-    background: var(--glass-solid) !important;
-    backdrop-filter: blur(var(--blur-strong)) saturate(1.3) !important;
-    -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.3) !important;
-  }
-
-  /* Fix button groups staying inside cards */
-  .flex.items-center.gap-2.flex-wrap {
-    flex-wrap: wrap !important;
-  }
-}
-
-/* ── Light Mode Specific Fixes ───────────────────────────────────────────── */
-html.light-mode {
-  /* Ensure readable text on all surfaces */
-  --glass: rgba(255, 255, 255, 0.72);
-  --glass-strong: rgba(255, 255, 255, 0.85);
-  --glass-solid: rgba(255, 255, 255, 0.94);
-}
-
-html.light-mode .bg-navy-800,
-html.light-mode .glass-panel,
-html.light-mode .bg-navy-700 {
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.03),
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
-}
-
-html.light-mode .text-white {
-  color: var(--text) !important;
-}
-
-html.light-mode .bg-blue-600 {
-  color: #fff !important;
-}
-
-/* Warning/yellow text visibility in light mode */
-html.light-mode .text-yellow-400,
-html.light-mode .text-amber-400,
-html.light-mode .text-orange-400 {
-  color: #A06408 !important;
-}
-
-html.light-mode .bg-yellow-500\/20,
-html.light-mode .bg-amber-500\/20 {
-  background: rgba(160, 100, 8, 0.1) !important;
-  color: #A06408 !important;
-}
-
-html.light-mode .border-yellow-500\/30,
-html.light-mode .border-amber-500\/30 {
-  border-color: rgba(160, 100, 8, 0.25) !important;
-}
-
-/* Ensure warning badges in scorecard are visible */
-html.light-mode .text-orange-400 {
-  color: #C06A08 !important;
-}
-
-html.light-mode .text-yellow-400 {
-  color: #B08800 !important;
-}
-
-/* ── Pulse Animation ────────────────────────────────────────────────────── */
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
 }

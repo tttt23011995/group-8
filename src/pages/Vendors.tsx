@@ -1,10 +1,9 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Search, Plus, Mail, Clock, FileText, ChevronDown, CreditCard as Edit2, Trash2, X, AlertTriangle, Building2, Phone, MapPin, Calendar, Star, FileText as FileTextIcon, Download, StickyNote, Check, Scale, ArrowUp, ArrowDown, Minus } from 'lucide-react';
-import { getVendors, deleteVendor, upsertVendor, Vendor, generateVendorCode, getPurchaseOrders, getVendorRatings, PurchaseOrder } from '../lib/data';
-import { useRefresh } from '../lib/RefreshContext';
+import { getVendors, saveVendors, Vendor, generateVendorCode, getPurchaseOrders, getVendorRatings, PurchaseOrder } from '../lib/data';
 
-async function getOpenPOCount(vendor: Vendor): Promise<number> {
-  const pos = await getPurchaseOrders();
+function getOpenPOCount(vendor: Vendor): number {
+  const pos = getPurchaseOrders();
   const vendorId = vendor.id;
   const vendorNameNorm = vendor.name.trim().toLowerCase();
 
@@ -114,23 +113,8 @@ const emptyForm: VendorFormData = {
 };
 
 export default function Vendors() {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [pos, setPos] = useState<PurchaseOrder[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>(() => getVendors());
   const [search, setSearch] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const { refreshKey, triggerRefresh } = useRefresh();
-
-  useEffect(() => {
-    Promise.all([
-      getVendors(),
-      getPurchaseOrders(),
-    ]).then(([v, p]) => {
-      setVendors(v);
-      setPos(p);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [refreshKey]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [deletingVendor, setDeletingVendor] = useState<Vendor | null>(null);
@@ -199,51 +183,49 @@ export default function Vendors() {
     return Object.keys(errors).length === 0;
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (!validateForm()) return;
 
-    setIsSaving(true);
-    try {
-      if (editingVendor) {
-        const updatedVendor: Vendor = {
-          ...editingVendor,
-          name: form.name,
-          contact: form.contact,
-          email: form.email,
-          phone: form.phone,
-          category: form.category,
-          paymentTerms: form.paymentTerms,
-          leadTime: parseInt(form.leadTime, 10) || 7,
-          status: form.status,
-          location: form.location,
-          notes: form.notes,
-        };
-        setVendors((prev) => prev.map((v) => v.id === editingVendor.id ? updatedVendor : v));
-        await upsertVendor(updatedVendor);
-      } else {
-        const vendorCode = await generateVendorCode();
-        const newVendor: Vendor = {
-          id: Math.random().toString(36).substring(2, 11),
-          vendorCode,
-          name: form.name,
-          contact: form.contact,
-          email: form.email,
-          phone: form.phone,
-          category: form.category,
-          paymentTerms: form.paymentTerms,
-          leadTime: parseInt(form.leadTime, 10) || 7,
-          status: form.status,
-          location: form.location,
-          score: 70 + Math.floor(Math.random() * 20),
-          contractEnd: '2027-01-01',
-          notes: form.notes,
-        };
-        setVendors((prev) => [...prev, newVendor]);
-        await upsertVendor(newVendor);
-      }
-      triggerRefresh();
-    } finally {
-      setIsSaving(false);
+    if (editingVendor) {
+      const updated = vendors.map((v) =>
+        v.id === editingVendor.id
+          ? {
+              ...v,
+              name: form.name,
+              contact: form.contact,
+              email: form.email,
+              phone: form.phone,
+              category: form.category,
+              paymentTerms: form.paymentTerms,
+              leadTime: parseInt(form.leadTime, 10) || 7,
+              status: form.status,
+              location: form.location,
+              notes: form.notes,
+            }
+          : v
+      );
+      setVendors(updated);
+      saveVendors(updated);
+    } else {
+      const newVendor: Vendor & { notes?: string } = {
+        id: Math.random().toString(36).substring(2, 11),
+        vendorCode: generateVendorCode(),
+        name: form.name,
+        contact: form.contact,
+        email: form.email,
+        phone: form.phone,
+        category: form.category,
+        paymentTerms: form.paymentTerms,
+        leadTime: parseInt(form.leadTime, 10) || 7,
+        status: form.status,
+        location: form.location,
+        score: 70 + Math.floor(Math.random() * 20),
+        contractEnd: '2027-01-01',
+        notes: form.notes,
+      };
+      const updated = [...vendors, newVendor];
+      setVendors(updated);
+      saveVendors(updated);
     }
 
     closeModal();
@@ -256,18 +238,17 @@ export default function Vendors() {
     setFormErrors({});
   }
 
-  async function handleDelete(vendor: Vendor) {
-    const openPOs = await getOpenPOCount(vendor);
+  function handleDelete(vendor: Vendor) {
+    const openPOs = getOpenPOCount(vendor);
     setDeletingVendor({ ...vendor, openPOCount: openPOs } as Vendor & { openPOCount: number });
   }
 
-  async function confirmDelete() {
+  function confirmDelete() {
     if (!deletingVendor) return;
-    const id = deletingVendor.id;
-    setVendors((prev) => prev.filter((v) => v.id !== id));
+    const updated = vendors.filter((v) => v.id !== deletingVendor.id);
+    setVendors(updated);
+    saveVendors(updated);
     setDeletingVendor(null);
-    await deleteVendor(id);
-    triggerRefresh();
   }
 
   function exportCSV() {
@@ -436,11 +417,7 @@ export default function Vendors() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((v) => {
-                const openPOCount = pos.filter((po) => {
-                  const s = po.status?.trim().toLowerCase() || '';
-                  if (s === 'invoiced' || s === 'delivered') return false;
-                  return po.vendorId === v.id;
-                }).length;
+                const openPOCount = getOpenPOCount(v);
                 const isSelected = compareIds.includes(v.id);
                 return (
                   <div
@@ -765,10 +742,9 @@ export default function Vendors() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={isSaving}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
               >
-                {isSaving ? 'Saving...' : editingVendor ? 'Save Changes' : 'Add Vendor'}
+                {editingVendor ? 'Save Changes' : 'Add Vendor'}
               </button>
             </div>
           </div>
@@ -851,16 +827,7 @@ function CompareModal({
   vendorB: Vendor;
   onClose: () => void;
 }) {
-  const [ratings, setRatings] = useState<Awaited<ReturnType<typeof getVendorRatings>>>([]);
-  const [openPOsA, setOpenPOsA] = useState(0);
-  const [openPOsB, setOpenPOsB] = useState(0);
-
-  useEffect(() => {
-    getVendorRatings().then(setRatings).catch(() => {});
-    getOpenPOCount(vendorA).then(setOpenPOsA).catch(() => {});
-    getOpenPOCount(vendorB).then(setOpenPOsB).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vendorA.id, vendorB.id]);
+  const ratings = useMemo(() => getVendorRatings(), []);
 
   const ratingA = ratings.find((r) => r.vendorId === vendorA.id);
   const ratingB = ratings.find((r) => r.vendorId === vendorB.id);
@@ -871,6 +838,9 @@ function CompareModal({
   const avgB = ratingB
     ? Math.round((ratingB.quality + ratingB.delivery + ratingB.cost + ratingB.responsiveness) / 4)
     : null;
+
+  const openPOsA = getOpenPOCount(vendorA);
+  const openPOsB = getOpenPOCount(vendorB);
 
   const leadA = vendorA.leadTime || 7;
   const leadB = vendorB.leadTime || 7;
@@ -1001,13 +971,8 @@ function VendorDetailPanel({
   onEdit: (v: Vendor) => void;
   onDelete: (v: Vendor) => void;
 }) {
-  const [pos, setPos] = useState<PurchaseOrder[]>([]);
-  const [ratings, setRatings] = useState<Awaited<ReturnType<typeof getVendorRatings>>>([]);
-
-  useEffect(() => {
-    getPurchaseOrders().then(setPos).catch(() => {});
-    getVendorRatings().then(setRatings).catch(() => {});
-  }, []);
+  const pos = useMemo(() => getPurchaseOrders(), []);
+  const ratings = useMemo(() => getVendorRatings(), []);
 
   const vendorPOs = pos.filter((po) => po.vendorId === vendor.id);
   const totalPOCount = vendorPOs.length;

@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Truck, LayoutDashboard, Users, FileText, Truck as TruckIcon, BarChart3, ShieldAlert, Menu, Bell, AlertTriangle, Star, Clock, Sun, Moon } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Truck, LayoutDashboard, Users, FileText, Truck as TruckIcon, BarChart3, ShieldAlert, Menu, Bell, AlertTriangle, Star, Clock } from 'lucide-react';
 import { getVendors, getPurchaseOrders } from '../lib/data';
 
 interface SidebarProps {
@@ -24,9 +24,9 @@ const navItems = [
   { id: 'ai-risk', label: 'AI Risk', icon: ShieldAlert, emoji: '\uD83D\uDEE1\uFE0F' },
 ];
 
-async function buildAlerts(): Promise<Alert[]> {
-  const vendors = await getVendors();
-  const pos = await getPurchaseOrders();
+function buildAlerts(): Alert[] {
+  const vendors = getVendors();
+  const pos = getPurchaseOrders();
   const alerts: Alert[] = [];
   const now = Date.now();
 
@@ -34,7 +34,7 @@ async function buildAlerts(): Promise<Alert[]> {
     alerts.push({
       id: `overdue-${po.id}`,
       icon: AlertTriangle,
-      iconColor: 'text-theme-danger',
+      iconColor: 'text-red-400',
       description: `${po.poNumber} from ${po.vendorName} is overdue`,
       page: 'delivery',
     });
@@ -44,7 +44,7 @@ async function buildAlerts(): Promise<Alert[]> {
     alerts.push({
       id: `score-${v.id}`,
       icon: Star,
-      iconColor: 'text-theme-warning',
+      iconColor: 'text-orange-400',
       description: `${v.name} has a low score (${v.score}/100)`,
       page: 'scorecard',
     });
@@ -60,7 +60,7 @@ async function buildAlerts(): Promise<Alert[]> {
       alerts.push({
         id: `stuck-${po.id}`,
         icon: Clock,
-        iconColor: 'text-theme-warning',
+        iconColor: 'text-yellow-400',
         description: `${po.poNumber} stuck in "${po.status}" for ${days}d`,
         page: 'purchase-orders',
       });
@@ -72,34 +72,9 @@ async function buildAlerts(): Promise<Alert[]> {
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const bellRef = useRef<HTMLDivElement>(null);
 
-  // Initialize theme from localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'light' || savedTheme === 'dark') {
-      setTheme(savedTheme);
-    } else {
-      setTheme('dark');
-    }
-  }, []);
-
-  // Apply theme class to html element
-  useEffect(() => {
-    const html = document.documentElement;
-    if (theme === 'light') {
-      html.classList.add('light-mode');
-    } else {
-      html.classList.remove('light-mode');
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    buildAlerts().then(setAlerts).catch(() => {});
-  }, []);
-
+  const alerts = useMemo(() => buildAlerts(), []);
   const badgeCount = alerts.length;
   const badgeLabel = badgeCount > 9 ? '9+' : String(badgeCount);
 
@@ -107,12 +82,6 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
     onNavigate(page);
     setMobileOpen(false);
     setBellOpen(false);
-  }
-
-  function toggleTheme() {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
   }
 
   useEffect(() => {
@@ -144,7 +113,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
     <div ref={bellRef} className="relative">
       <button
         onClick={() => setBellOpen((v) => !v)}
-        className="relative flex items-center justify-center w-8 h-8 rounded-lg text-theme-muted hover:text-theme transition-colors"
+        className="relative flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
         aria-label="Notifications"
         style={{ minHeight: 44, minWidth: 44 }}
       >
@@ -157,18 +126,18 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       </button>
 
       {bellOpen && (
-        <div className="glass-dropdown absolute left-0 top-10 w-72 overflow-hidden">
-          <div className="px-4 py-3 border-b border-theme">
-            <p className="text-sm font-semibold text-theme">Alerts</p>
-            <p className="text-xs text-theme-muted mt-0.5">
+        <div className="absolute left-0 top-10 w-72 bg-[#0f2244] border border-blue-900/50 rounded-xl shadow-2xl shadow-black/40 z-[300] overflow-hidden">
+          <div className="px-4 py-3 border-b border-blue-900/40">
+            <p className="text-sm font-semibold text-white">Alerts</p>
+            <p className="text-xs text-slate-500 mt-0.5">
               {badgeCount} active notification{badgeCount !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="max-h-64 overflow-y-auto">
             {alerts.length === 0 ? (
               <div className="px-4 py-6 text-center">
-                <Bell className="w-8 h-8 mx-auto text-theme-muted mb-2" />
-                <p className="text-sm text-theme-muted">No alerts right now</p>
+                <Bell className="w-8 h-8 mx-auto text-slate-600 mb-2" />
+                <p className="text-sm text-slate-500">No alerts right now</p>
               </div>
             ) : (
               alerts.map((alert) => {
@@ -177,11 +146,11 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                   <button
                     key={alert.id}
                     onClick={() => handleNav(alert.page)}
-                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-theme text-left"
+                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-blue-900/20 last:border-0 text-left"
                     style={{ minHeight: 44, position: 'relative', zIndex: 2, pointerEvents: 'auto' }}
                   >
                     <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${alert.iconColor}`} />
-                    <span className="text-xs text-theme-secondary leading-snug">{alert.description}</span>
+                    <span className="text-xs text-slate-300 leading-snug">{alert.description}</span>
                   </button>
                 );
               })
@@ -195,19 +164,19 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="mobile-topbar glass-nav fixed top-0 left-0 right-0 h-14 z-[200] flex items-center px-4 md:hidden border-b border-theme">
+      <div className="mobile-topbar fixed top-0 left-0 right-0 h-14 bg-[#0a1628] z-[200] flex items-center px-4 md:hidden border-b border-blue-900/40">
         <button
           onClick={() => setMobileOpen(true)}
-          className="text-theme-secondary hover:text-theme transition-colors"
+          className="text-slate-300 hover:text-white transition-colors"
           aria-label="Open navigation"
           style={{ minHeight: 44, minWidth: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 2, pointerEvents: 'auto' }}
         >
           <Menu className="w-6 h-6" />
         </button>
         <div className="flex items-center gap-2 ml-2">
-          <Truck className="w-5 h-5 text-theme-accent" />
-          <span className="text-base font-bold text-theme tracking-tight">
-            <span className="text-theme-accent">Procure</span>AI
+          <Truck className="w-5 h-5 text-blue-400" />
+          <span className="text-base font-bold text-white tracking-tight">
+            <span className="text-blue-400">Procure</span>AI
           </span>
         </div>
       </div>
@@ -219,13 +188,13 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       />
 
       {/* Sidebar */}
-      <aside className="sidebar glass-nav fixed left-0 top-0 h-screen w-[220px] z-[100] flex flex-col">
+      <aside className="sidebar fixed left-0 top-0 h-screen w-[220px] bg-[#0a1628] border-r border-blue-900/40 z-[100] flex flex-col">
         {/* Logo + bell */}
-        <div className="flex items-center justify-between px-5 h-16 border-b border-theme">
+        <div className="flex items-center justify-between px-5 h-16 border-b border-blue-900/40">
           <div className="flex items-center gap-2">
-            <Truck className="w-7 h-7 text-theme-accent" />
-            <span className="text-xl font-bold text-theme tracking-tight">
-              <span className="text-theme-accent">Procure</span>AI
+            <Truck className="w-7 h-7 text-blue-400" />
+            <span className="text-xl font-bold text-white tracking-tight">
+              <span className="text-blue-400">Procure</span>AI
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -242,10 +211,10 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 key={item.id}
                 onClick={() => handleNav(item.id)}
                 style={{ minHeight: 44, position: 'relative', zIndex: 101, pointerEvents: 'auto' }}
-                className={`nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   active
-                    ? 'nav-item-active'
-                    : 'text-theme-muted hover:text-theme'
+                    ? 'bg-blue-600/10 text-blue-400 border-l-[3px] border-[#3b82f6] -ml-[3px] pl-[18px]'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5 border-l-[3px] border-transparent -ml-[3px] pl-[18px]'
                 }`}
               >
                 <span className="text-lg leading-none">{item.emoji}</span>
@@ -255,21 +224,9 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           })}
         </nav>
 
-        {/* Footer with theme toggle */}
-        <div className="px-5 py-4 border-t border-theme flex items-center justify-between">
-          <p className="text-xs text-theme-muted">ProcureAI v1.0</p>
-          <button
-            onClick={toggleTheme}
-            className="theme-toggle flex items-center justify-center w-9 h-9 transition-colors"
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            style={{ minHeight: 36, minWidth: 36 }}
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-4.5 h-4.5 text-theme-warning" />
-            ) : (
-              <Moon className="w-4.5 h-4.5 text-theme-accent" />
-            )}
-          </button>
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-blue-900/40">
+          <p className="text-xs text-slate-600">ProcureAI v1.0</p>
         </div>
       </aside>
     </>

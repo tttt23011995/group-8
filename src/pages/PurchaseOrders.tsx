@@ -2,16 +2,13 @@ import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Plus, Filter, Trash2, Eye, CreditCard as Edit2, X, FileText, ChevronDown, AlertTriangle, Printer, Truck, Copy, CheckSquare, Square, TrendingUp, DollarSign, Building2 } from 'lucide-react';
 import {
   getPurchaseOrders,
+  savePurchaseOrders,
   getVendors,
   PurchaseOrder,
   LineItem,
   generatePONumber,
   CATALOG_ITEMS,
-  Vendor,
-  upsertPurchaseOrder,
-  deletePurchaseOrderById,
 } from '../lib/data';
-import { useRefresh } from '../lib/RefreshContext';
 
 const statusColors: Record<string, string> = {
   ordered: 'bg-blue-500 text-white',
@@ -97,8 +94,7 @@ function formatMoney(n: number): string {
 }
 
 export default function PurchaseOrders() {
-  const [pos, setPos] = useState<PurchaseOrder[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [pos, setPos] = useState<PurchaseOrder[]>(() => getPurchaseOrders());
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterVendor, setFilterVendor] = useState<string>('all');
@@ -111,17 +107,9 @@ export default function PurchaseOrders() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [autocompleteOpen, setAutocompleteOpen] = useState<string | null>(null);
-  const [pendingPONumber, setPendingPONumber] = useState<string>('');
-  const [isSaving, setIsSaving] = useState(false);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { refreshKey, triggerRefresh } = useRefresh();
 
-  useEffect(() => {
-    Promise.all([getPurchaseOrders(), getVendors()]).then(([p, v]) => {
-      setPos(p);
-      setVendors(v);
-    }).catch(() => {});
-  }, [refreshKey]);
+  const vendors = useMemo(() => getVendors(), []);
 
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -251,7 +239,6 @@ export default function PurchaseOrders() {
     setEditingPO(null);
     setForm(emptyForm());
     setValidationErrors({});
-    setPendingPONumber('');
   }
 
   function addLineItem() {
@@ -309,7 +296,7 @@ export default function PurchaseOrders() {
     }
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (!validateForm()) return;
 
     const validItems = form.lineItems.filter(
@@ -331,56 +318,53 @@ export default function PurchaseOrders() {
       lineTotal: calcLineTotal(i),
     }));
 
-    setIsSaving(true);
-    try {
-      if (editingPO) {
-        const updatedPO: PurchaseOrder = {
-          ...editingPO,
-          vendorId: form.vendorId,
-          vendorName: vendor.name,
-          deliveryDate: form.deliveryDate,
-          items: lineItemsToString(validItems),
-          lineItems,
-          subtotal,
-          tax,
-          total: grandTotal,
-        };
-        setPos((prev) => prev.map((po) => po.id === editingPO.id ? updatedPO : po));
-        await upsertPurchaseOrder(updatedPO);
-      } else {
-        const poNumber = pendingPONumber || await generatePONumber();
-        const newPO: PurchaseOrder = {
-          id: Math.random().toString(36).substring(2, 11),
-          poNumber,
-          vendorId: form.vendorId,
-          vendorName: vendor.name,
-          date: new Date().toISOString().slice(0, 10),
-          total: grandTotal,
-          status: 'ordered',
-          items: lineItemsToString(validItems),
-          deliveryDate: form.deliveryDate,
-          lineItems,
-          subtotal,
-          tax,
-        };
-        setPos((prev) => [...prev, newPO]);
-        await upsertPurchaseOrder(newPO);
-      }
-      triggerRefresh();
-    } finally {
-      setIsSaving(false);
+    if (editingPO) {
+      const updated = pos.map((po) =>
+        po.id === editingPO.id
+          ? {
+              ...po,
+              vendorId: form.vendorId,
+              vendorName: vendor.name,
+              deliveryDate: form.deliveryDate,
+              items: lineItemsToString(validItems),
+              lineItems,
+              subtotal,
+              tax,
+              total: grandTotal,
+            }
+          : po
+      );
+      setPos(updated);
+      savePurchaseOrders(updated);
+    } else {
+      const newPO: PurchaseOrder = {
+        id: Math.random().toString(36).substring(2, 11),
+        poNumber: generatePONumber(),
+        vendorId: form.vendorId,
+        vendorName: vendor.name,
+        date: new Date().toISOString().slice(0, 10),
+        total: grandTotal,
+        status: 'ordered',
+        items: lineItemsToString(validItems),
+        deliveryDate: form.deliveryDate,
+        lineItems,
+        subtotal,
+        tax,
+      };
+      const updated = [...pos, newPO];
+      setPos(updated);
+      savePurchaseOrders(updated);
     }
 
     closeForm();
   }
 
-  async function confirmDelete() {
+  function confirmDelete() {
     if (!deletingPO) return;
-    const id = deletingPO.id;
-    setPos((prev) => prev.filter((p) => p.id !== id));
+    const updated = pos.filter((p) => p.id !== deletingPO.id);
+    setPos(updated);
+    savePurchaseOrders(updated);
     setDeletingPO(null);
-    await deletePurchaseOrderById(id);
-    triggerRefresh();
   }
 
   const subtotal = calcSubtotal(form.lineItems);
@@ -419,11 +403,10 @@ export default function PurchaseOrders() {
     };
   }, [pos]);
 
-  async function handleDuplicatePO(po: PurchaseOrder) {
-    const poNumber = await generatePONumber();
+  function handleDuplicatePO(po: PurchaseOrder) {
     const newPO: PurchaseOrder = {
       id: Math.random().toString(36).substring(2, 11),
-      poNumber,
+      poNumber: generatePONumber(),
       vendorId: po.vendorId,
       vendorName: po.vendorName,
       date: new Date().toISOString().slice(0, 10),
@@ -438,9 +421,9 @@ export default function PurchaseOrders() {
       subtotal: po.subtotal,
       tax: po.tax,
     };
-    setPos((prev) => [...prev, newPO]);
-    await upsertPurchaseOrder(newPO);
-    triggerRefresh();
+    const updated = [...pos, newPO];
+    setPos(updated);
+    savePurchaseOrders(updated);
   }
 
   function toggleSelectAll() {
@@ -461,13 +444,12 @@ export default function PurchaseOrders() {
     setSelectedIds(next);
   }
 
-  async function confirmBulkDelete() {
-    const ids = [...selectedIds];
-    setPos((prev) => prev.filter((p) => !selectedIds.has(p.id)));
+  function confirmBulkDelete() {
+    const updated = pos.filter((p) => !selectedIds.has(p.id));
+    setPos(updated);
+    savePurchaseOrders(updated);
     setSelectedIds(new Set());
     setShowBulkDeleteConfirm(false);
-    await Promise.all(ids.map((id) => deletePurchaseOrderById(id)));
-    triggerRefresh();
   }
 
   return (
@@ -484,7 +466,6 @@ export default function PurchaseOrders() {
           onClick={() => {
             setEditingPO(null);
             setForm(emptyForm());
-            generatePONumber().then(setPendingPONumber).catch(() => {});
             setShowForm(true);
           }}
           className="relative z-2 flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-blue-900/20"
@@ -651,7 +632,7 @@ export default function PurchaseOrders() {
               <div>
                 <label className="block text-sm text-slate-400 mb-1.5">PO Number</label>
                 <div className="px-4 py-2.5 bg-navy-700/50 border border-blue-900/30 rounded-lg text-blue-400 font-mono text-sm select-all">
-                  {editingPO ? editingPO.poNumber : pendingPONumber || '—'}
+                  {editingPO ? editingPO.poNumber : generatePONumber()}
                 </div>
               </div>
 
@@ -836,10 +817,10 @@ export default function PurchaseOrders() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={isSaving || !form.vendorId || form.lineItems.length === 0 || form.lineItems.every((i) => !i.name.trim())}
+                disabled={!form.vendorId || form.lineItems.length === 0 || form.lineItems.every((i) => !i.name.trim())}
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {isSaving ? 'Saving...' : editingPO ? 'Save Changes' : 'Save Purchase Order'}
+                {editingPO ? 'Save Changes' : 'Save Purchase Order'}
               </button>
             </div>
           </div>

@@ -1,56 +1,21 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { Chart } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
-  BarController,
   LineElement,
-  LineController,
   PointElement,
-  ArcElement,
-  DoughnutController,
-  PieController,
-  RadarController,
-  RadialLinearScale,
   Title,
   Tooltip,
   Legend,
-  Filler,
 } from 'chart.js';
 import { Users, FileText, AlertTriangle, Star, TrendingUp, TrendingDown } from 'lucide-react';
-import { getVendors, getPurchaseOrders, getChartData, Vendor, PurchaseOrder } from '../lib/data';
+import { getVendors, getPurchaseOrders, getChartData } from '../lib/data';
 import { useAnimatedCounter } from '../lib/useAnimatedCounter';
-import { useRefresh } from '../lib/RefreshContext';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  BarController,
-  LineElement,
-  LineController,
-  PointElement,
-  ArcElement,
-  DoughnutController,
-  PieController,
-  RadarController,
-  RadialLinearScale,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-);
-
-function isOverdue(po: PurchaseOrder): boolean {
-  if (po.status === 'delivered' || po.status === 'invoiced') return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const deliveryDate = new Date(po.deliveryDate);
-  deliveryDate.setHours(0, 0, 0, 0);
-  return Math.floor((today.getTime() - deliveryDate.getTime()) / 86400000) > 0;
-}
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend);
 
 const statusColors: Record<string, string> = {
   Ordered: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -101,25 +66,16 @@ function KPICard({ label, mobileLabel, value, icon: Icon, borderColor, trend }: 
 }
 
 export default function Dashboard() {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [pos, setPos] = useState<PurchaseOrder[]>([]);
+  const vendors = useMemo(() => getVendors(), []);
+  const pos = useMemo(() => getPurchaseOrders(), []);
   const [range, setRange] = useState<RangeOption>('6M');
-  const [chartPayload, setChartPayload] = useState<{ months: string[]; counts: number[]; spends: number[]; availableMonths: number }>({ months: [], counts: [], spends: [], availableMonths: 0 });
-  const { refreshKey } = useRefresh();
 
-  useEffect(() => {
-    getVendors().then(setVendors).catch(() => {});
-    getPurchaseOrders().then(setPos).catch(() => {});
-  }, [refreshKey]);
-
-  useEffect(() => {
-    getChartData(rangeMonths[range]).then(setChartPayload).catch(() => {});
-  }, [range, refreshKey]);
+  const chartPayload = useMemo(() => getChartData(rangeMonths[range]), [range]);
   const showAvailableNote = chartPayload.availableMonths < rangeMonths[range];
 
   const totalVendors = vendors.length;
   const openPOs = pos.filter((p) => p.status !== 'delivered').length;
-  const overdueDeliveries = pos.filter(isOverdue).length;
+  const overdueDeliveries = pos.filter((p) => p.status === 'overdue').length;
   const avgScore = vendors.length
     ? Math.round(vendors.reduce((sum, v) => sum + v.score, 0) / vendors.length)
     : 0;

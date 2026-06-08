@@ -1,23 +1,13 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Chart } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
-  BarController,
-  LineElement,
-  LineController,
-  PointElement,
-  ArcElement,
-  DoughnutController,
-  PieController,
-  RadarController,
-  RadialLinearScale,
   Title,
   Tooltip,
   Legend,
-  Filler,
 } from 'chart.js';
 import {
   Package,
@@ -36,35 +26,17 @@ import {
 } from 'lucide-react';
 import {
   getPurchaseOrders,
-  upsertPurchaseOrder,
+  savePurchaseOrders,
   getDeliveryPerformance,
   saveDeliveryPerformance,
   PurchaseOrder,
   DeliveryPerformance,
   DeliveryNote,
 } from '../lib/data';
-import { useRefresh } from '../lib/RefreshContext';
 
 
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  BarController,
-  LineElement,
-  LineController,
-  PointElement,
-  ArcElement,
-  DoughnutController,
-  PieController,
-  RadarController,
-  RadialLinearScale,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const STATUS_ORDER: PurchaseOrder['status'][] = [
   'ordered',
@@ -352,20 +324,12 @@ function DeliveryNotesPanel({
 // ── Main Component ────────────────────────────────────────────────────────
 
 export default function Delivery({ onNavigate }: { onNavigate?: (page: string) => void }) {
-  const [pos, setPos] = useState<PurchaseOrder[]>([]);
+  const [pos, setPos] = useState<PurchaseOrder[]>(() => getPurchaseOrders());
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('earliest');
-  const [perf, setPerf] = useState<Record<string, DeliveryPerformance>>({});
+  const [perf, setPerf] = useState<Record<string, DeliveryPerformance>>(() => getDeliveryPerformance());
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
-  const { refreshKey, triggerRefresh } = useRefresh();
-
-  useEffect(() => {
-    Promise.all([getPurchaseOrders(), getDeliveryPerformance()]).then(([p, d]) => {
-      setPos(p);
-      setPerf(d);
-    }).catch(() => {});
-  }, [refreshKey]);
 
   const isDeliveredOrLater = (po: PurchaseOrder) =>
     STATUS_ORDER.indexOf(po.status) >= STATUS_ORDER.indexOf('delivered');
@@ -435,14 +399,15 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
     setActiveFilter((prev) => (prev === key ? null : key));
   }, []);
 
-  const handleSaveNote = useCallback(async (poId: string, notes: DeliveryNote[]) => {
-    const updatedPO = pos.find((po) => po.id === poId);
-    if (!updatedPO) return;
-    const withNotes = { ...updatedPO, deliveryNotes: notes };
-    setPos((prev) => prev.map((po) => po.id === poId ? withNotes : po));
-    await upsertPurchaseOrder(withNotes);
-    triggerRefresh();
-  }, [pos, triggerRefresh]);
+  const handleSaveNote = useCallback((poId: string, notes: DeliveryNote[]) => {
+    setPos((prev) => {
+      const updated = prev.map((po) =>
+        po.id === poId ? { ...po, deliveryNotes: notes } : po
+      );
+      savePurchaseOrders(updated);
+      return updated;
+    });
+  }, []);
 
   function toggleNotes(poId: string) {
     setExpandedNotes((prev) => {
@@ -453,73 +418,83 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
     });
   }
 
-  const advanceStatus = useCallback(async (poId: string) => {
-    const updated = pos.map((po) => {
-      if (po.id !== poId) return po;
-      const idx = STATUS_ORDER.indexOf(po.status);
-      if (idx >= STATUS_ORDER.length - 1) return po;
-      const nextStatus = STATUS_ORDER[idx + 1];
-      const extended = po as PurchaseOrder & { actualDeliveryDate?: string };
-      const updatedPo: PurchaseOrder & { actualDeliveryDate?: string } = { ...po, status: nextStatus };
-      if (nextStatus === 'delivered' && !extended.actualDeliveryDate) {
-        updatedPo.actualDeliveryDate = new Date().toISOString().slice(0, 10);
-      }
-      return updatedPo;
+  const advanceStatus = useCallback((poId: string) => {
+    setPos((prev) => {
+      const updated = prev.map((po) => {
+        if (po.id !== poId) return po;
+        const idx = STATUS_ORDER.indexOf(po.status);
+        if (idx >= STATUS_ORDER.length - 1) return po;
+        const nextStatus = STATUS_ORDER[idx + 1];
+        const extended = po as PurchaseOrder & { actualDeliveryDate?: string };
+        const updatedPo: PurchaseOrder & { actualDeliveryDate?: string } = { ...po, status: nextStatus };
+        if (nextStatus === 'delivered' && !extended.actualDeliveryDate) {
+          updatedPo.actualDeliveryDate = new Date().toISOString().slice(0, 10);
+        }
+        return updatedPo;
+      });
+
+      savePurchaseOrders(updated);
+
+      // Update delivery performance for newly delivered/invoiced POs
+      setPerf((prevPerf) => {
+        const newPerf = { ...prevPerf };
+        let changed = false;
+        updated.forEach((po) => {
+          const extended = po as PurchaseOrder & { actualDeliveryDate?: string };
+          const existing = prevPerf[po.id];
+          if (existing) return; // never overwrite
+          const perfResult = calcDeliveryPerformance(extended);
+          if (perfResult) {
+            newPerf[po.id] = perfResult;
+            changed = true;
+          }
+        });
+        if (changed) {
+          saveDeliveryPerformance(newPerf);
+        }
+        return changed ? newPerf : prevPerf;
+      });
+
+      return updated;
     });
+  }, []);
 
-    setPos(updated);
-    const changedPO = updated.find((po) => po.id === poId);
-    if (changedPO) await upsertPurchaseOrder(changedPO);
+  const revertStatus = useCallback((poId: string) => {
+    setPos((prev) => {
+      const updated = prev.map((po) => {
+        if (po.id !== poId) return po;
+        const idx = STATUS_ORDER.indexOf(po.status);
+        if (idx <= 0) return po;
+        const prevStatus = STATUS_ORDER[idx - 1];
+        const updatedPo: PurchaseOrder & { actualDeliveryDate?: string } = { ...po, status: prevStatus };
+        // Delivered -> In Transit: remove actualDeliveryDate
+        if (po.status === 'delivered') {
+          delete (updatedPo as Record<string, unknown>).actualDeliveryDate;
+        }
+        return updatedPo;
+      });
 
-    const newPerf = { ...perf };
-    let changed = false;
-    updated.forEach((po) => {
-      const extended = po as PurchaseOrder & { actualDeliveryDate?: string };
-      if (perf[po.id]) return;
-      const perfResult = calcDeliveryPerformance(extended);
-      if (perfResult) {
-        newPerf[po.id] = perfResult;
-        changed = true;
-      }
+      savePurchaseOrders(updated);
+
+      // Remove delivery performance if reverting from delivered/invoiced
+      setPerf((prevPerf) => {
+        const newPerf = { ...prevPerf };
+        let changed = false;
+        updated.forEach((po) => {
+          if (po.status !== 'delivered' && po.status !== 'invoiced' && prevPerf[po.id]) {
+            delete newPerf[po.id];
+            changed = true;
+          }
+        });
+        if (changed) {
+          saveDeliveryPerformance(newPerf);
+        }
+        return changed ? newPerf : prevPerf;
+      });
+
+      return updated;
     });
-    if (changed) {
-      setPerf(newPerf);
-      await saveDeliveryPerformance(newPerf);
-    }
-    triggerRefresh();
-  }, [pos, perf, triggerRefresh]);
-
-  const revertStatus = useCallback(async (poId: string) => {
-    const updated = pos.map((po) => {
-      if (po.id !== poId) return po;
-      const idx = STATUS_ORDER.indexOf(po.status);
-      if (idx <= 0) return po;
-      const prevStatus = STATUS_ORDER[idx - 1];
-      const updatedPo: PurchaseOrder & { actualDeliveryDate?: string } = { ...po, status: prevStatus };
-      if (po.status === 'delivered') {
-        delete (updatedPo as Record<string, unknown>).actualDeliveryDate;
-      }
-      return updatedPo;
-    });
-
-    setPos(updated);
-    const changedPO = updated.find((po) => po.id === poId);
-    if (changedPO) await upsertPurchaseOrder(changedPO);
-
-    const newPerf = { ...perf };
-    let changed = false;
-    updated.forEach((po) => {
-      if (po.status !== 'delivered' && po.status !== 'invoiced' && perf[po.id]) {
-        delete newPerf[po.id];
-        changed = true;
-      }
-    });
-    if (changed) {
-      setPerf(newPerf);
-      await saveDeliveryPerformance(newPerf);
-    }
-    triggerRefresh();
-  }, [pos, perf, triggerRefresh]);
+  }, []);
 
   const badgeItems: { key: string; label: string; count: number; color: string; bg: string; activeBg: string; pulse: boolean }[] = [
     { key: 'ordered',     label: 'Ordered',    count: counts.ordered,       color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/20',    activeBg: 'bg-blue-600/30 border-blue-500/50',    pulse: false },

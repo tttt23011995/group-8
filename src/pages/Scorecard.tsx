@@ -1,19 +1,13 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Chart } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
-  BarController,
   LineElement,
-  LineController,
   PointElement,
   ArcElement,
-  DoughnutController,
-  PieController,
-  RadarController,
-  RadialLinearScale,
   Title,
   Tooltip,
   Legend,
@@ -36,33 +30,26 @@ import {
 import {
   getPurchaseOrders,
   getDeliveryPerformance,
+  getVendors,
   PurchaseOrder,
-  DeliveryPerformance,
 } from '../lib/data';
 import {
   buildSupplierRiskData,
   SupplierRiskEntry,
   SupplierRisk,
 } from '../lib/supplierRisk';
-import { useRefresh } from '../lib/RefreshContext';
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
-  BarController,
   LineElement,
-  LineController,
   PointElement,
   ArcElement,
-  DoughnutController,
-  PieController,
-  RadarController,
-  RadialLinearScale,
   Title,
   Tooltip,
   Legend,
-  Filler,
+  Filler
 );
 
 // ── Risk Configuration ────────────────────────────────────────────────────
@@ -105,11 +92,12 @@ interface KPIData {
   avgRiskScore: number;
 }
 
-function computeKPIData(riskData: SupplierRiskEntry[], pos: PurchaseOrder[], perfMap: Record<string, DeliveryPerformance>): KPIData {
+function computeKPIData(riskData: SupplierRiskEntry[], pos: PurchaseOrder[]): KPIData {
   const totalVendors = riskData.length;
   const highRiskVendors = riskData.filter(r => r.risk.riskLevel === 'High').length;
 
   const delivered = pos.filter(p => p.status === 'delivered' || p.status === 'invoiced');
+  const perfMap = getDeliveryPerformance();
   let lateCount = 0;
   delivered.forEach(po => {
     const perf = perfMap[po.id];
@@ -325,7 +313,8 @@ function VendorRankingTable({
   );
 }
 
-function DeliveryTrendChart({ pos, perfMap }: { pos: PurchaseOrder[]; perfMap: Record<string, DeliveryPerformance> }) {
+function DeliveryTrendChart({ pos }: { pos: PurchaseOrder[] }) {
+  const perfMap = getDeliveryPerformance();
 
   const monthlyData: Record<string, { total: number; onTime: number }> = {};
   pos.filter(p => p.status === 'delivered' || p.status === 'invoiced').forEach(po => {
@@ -591,22 +580,14 @@ function VendorDetailPanel({
 // ── Main Component ────────────────────────────────────────────────────────
 
 export default function Scorecard() {
-  const [riskData, setRiskData] = useState<SupplierRiskEntry[]>([]);
-  const [pos, setPos] = useState<PurchaseOrder[]>([]);
-  const [perfMap, setPerfMap] = useState<Record<string, DeliveryPerformance>>({});
-  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
-  const { refreshKey } = useRefresh();
+  const vendors = useMemo(() => getVendors(), []);
+  const pos = useMemo(() => getPurchaseOrders(), []);
+  const riskData = useMemo(() => buildSupplierRiskData(), []);
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(() => {
+    return riskData.length > 0 ? riskData[0].risk.vendorId : null;
+  });
 
-  useEffect(() => {
-    Promise.all([buildSupplierRiskData(), getPurchaseOrders(), getDeliveryPerformance()]).then(([rd, p, d]) => {
-      setRiskData(rd);
-      setPos(p);
-      setPerfMap(d);
-      if (rd.length > 0) setSelectedVendorId(rd[0].risk.vendorId);
-    }).catch(() => {});
-  }, [refreshKey]);
-
-  const kpiData = useMemo(() => computeKPIData(riskData, pos, perfMap), [riskData, pos, perfMap]);
+  const kpiData = useMemo(() => computeKPIData(riskData, pos), [riskData, pos]);
   const selectedEntry = useMemo(
     () => riskData.find(d => d.risk.vendorId === selectedVendorId) || null,
     [riskData, selectedVendorId]
@@ -635,7 +616,7 @@ export default function Scorecard() {
       {/* 2. Risk Distribution + Delivery Trend */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <RiskDistributionChart data={riskData} />
-        <DeliveryTrendChart pos={pos} perfMap={perfMap} />
+        <DeliveryTrendChart pos={pos} />
       </div>
 
       {/* 3. Vendor Ranking + Detail Panel */}
