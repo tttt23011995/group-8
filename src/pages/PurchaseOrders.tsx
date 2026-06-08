@@ -2,14 +2,16 @@ import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Plus, Filter, Trash2, Eye, CreditCard as Edit2, X, FileText, ChevronDown, AlertTriangle, Printer, Truck, Copy, CheckSquare, Square, TrendingUp, DollarSign, Building2 } from 'lucide-react';
 import {
   getPurchaseOrders,
-  savePurchaseOrders,
   getVendors,
   PurchaseOrder,
   LineItem,
   generatePONumber,
   CATALOG_ITEMS,
   Vendor,
+  upsertPurchaseOrder,
+  deletePurchaseOrderById,
 } from '../lib/data';
+import { useRefresh } from '../lib/RefreshContext';
 
 const statusColors: Record<string, string> = {
   ordered: 'bg-blue-500 text-white',
@@ -110,14 +112,16 @@ export default function PurchaseOrders() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [autocompleteOpen, setAutocompleteOpen] = useState<string | null>(null);
   const [pendingPONumber, setPendingPONumber] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { refreshKey, triggerRefresh } = useRefresh();
 
   useEffect(() => {
     Promise.all([getPurchaseOrders(), getVendors()]).then(([p, v]) => {
       setPos(p);
       setVendors(v);
     }).catch(() => {});
-  }, []);
+  }, [refreshKey]);
 
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -327,43 +331,44 @@ export default function PurchaseOrders() {
       lineTotal: calcLineTotal(i),
     }));
 
-    if (editingPO) {
-      const updated = pos.map((po) =>
-        po.id === editingPO.id
-          ? {
-              ...po,
-              vendorId: form.vendorId,
-              vendorName: vendor.name,
-              deliveryDate: form.deliveryDate,
-              items: lineItemsToString(validItems),
-              lineItems,
-              subtotal,
-              tax,
-              total: grandTotal,
-            }
-          : po
-      );
-      setPos(updated);
-      await savePurchaseOrders(updated);
-    } else {
-      const poNumber = pendingPONumber || await generatePONumber();
-      const newPO: PurchaseOrder = {
-        id: Math.random().toString(36).substring(2, 11),
-        poNumber,
-        vendorId: form.vendorId,
-        vendorName: vendor.name,
-        date: new Date().toISOString().slice(0, 10),
-        total: grandTotal,
-        status: 'ordered',
-        items: lineItemsToString(validItems),
-        deliveryDate: form.deliveryDate,
-        lineItems,
-        subtotal,
-        tax,
-      };
-      const updated = [...pos, newPO];
-      setPos(updated);
-      await savePurchaseOrders(updated);
+    setIsSaving(true);
+    try {
+      if (editingPO) {
+        const updatedPO: PurchaseOrder = {
+          ...editingPO,
+          vendorId: form.vendorId,
+          vendorName: vendor.name,
+          deliveryDate: form.deliveryDate,
+          items: lineItemsToString(validItems),
+          lineItems,
+          subtotal,
+          tax,
+          total: grandTotal,
+        };
+        setPos((prev) => prev.map((po) => po.id === editingPO.id ? updatedPO : po));
+        await upsertPurchaseOrder(updatedPO);
+      } else {
+        const poNumber = pendingPONumber || await generatePONumber();
+        const newPO: PurchaseOrder = {
+          id: Math.random().toString(36).substring(2, 11),
+          poNumber,
+          vendorId: form.vendorId,
+          vendorName: vendor.name,
+          date: new Date().toISOString().slice(0, 10),
+          total: grandTotal,
+          status: 'ordered',
+          items: lineItemsToString(validItems),
+          deliveryDate: form.deliveryDate,
+          lineItems,
+          subtotal,
+          tax,
+        };
+        setPos((prev) => [...prev, newPO]);
+        await upsertPurchaseOrder(newPO);
+      }
+      triggerRefresh();
+    } finally {
+      setIsSaving(false);
     }
 
     closeForm();
@@ -371,10 +376,11 @@ export default function PurchaseOrders() {
 
   async function confirmDelete() {
     if (!deletingPO) return;
-    const updated = pos.filter((p) => p.id !== deletingPO.id);
-    setPos(updated);
-    await savePurchaseOrders(updated);
+    const id = deletingPO.id;
+    setPos((prev) => prev.filter((p) => p.id !== id));
     setDeletingPO(null);
+    await deletePurchaseOrderById(id);
+    triggerRefresh();
   }
 
   const subtotal = calcSubtotal(form.lineItems);
@@ -432,9 +438,9 @@ export default function PurchaseOrders() {
       subtotal: po.subtotal,
       tax: po.tax,
     };
-    const updated = [...pos, newPO];
-    setPos(updated);
-    await savePurchaseOrders(updated);
+    setPos((prev) => [...prev, newPO]);
+    await upsertPurchaseOrder(newPO);
+    triggerRefresh();
   }
 
   function toggleSelectAll() {
@@ -456,11 +462,12 @@ export default function PurchaseOrders() {
   }
 
   async function confirmBulkDelete() {
-    const updated = pos.filter((p) => !selectedIds.has(p.id));
-    setPos(updated);
-    await savePurchaseOrders(updated);
+    const ids = [...selectedIds];
+    setPos((prev) => prev.filter((p) => !selectedIds.has(p.id)));
     setSelectedIds(new Set());
     setShowBulkDeleteConfirm(false);
+    await Promise.all(ids.map((id) => deletePurchaseOrderById(id)));
+    triggerRefresh();
   }
 
   return (
@@ -829,10 +836,10 @@ export default function PurchaseOrders() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={!form.vendorId || form.lineItems.length === 0 || form.lineItems.every((i) => !i.name.trim())}
+                disabled={isSaving || !form.vendorId || form.lineItems.length === 0 || form.lineItems.every((i) => !i.name.trim())}
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {editingPO ? 'Save Changes' : 'Save Purchase Order'}
+                {isSaving ? 'Saving...' : editingPO ? 'Save Changes' : 'Save Purchase Order'}
               </button>
             </div>
           </div>

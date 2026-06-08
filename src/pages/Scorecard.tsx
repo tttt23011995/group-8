@@ -38,6 +38,7 @@ import {
   SupplierRiskEntry,
   SupplierRisk,
 } from '../lib/supplierRisk';
+import { useRefresh } from '../lib/RefreshContext';
 
 ChartJS.register(
   CategoryScale,
@@ -582,6 +583,7 @@ export default function Scorecard() {
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [perfMap, setPerfMap] = useState<Record<string, DeliveryPerformance>>({});
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const { refreshKey } = useRefresh();
 
   useEffect(() => {
     Promise.all([buildSupplierRiskData(), getPurchaseOrders(), getDeliveryPerformance()]).then(([rd, p, d]) => {
@@ -590,7 +592,7 @@ export default function Scorecard() {
       setPerfMap(d);
       if (rd.length > 0) setSelectedVendorId(rd[0].risk.vendorId);
     }).catch(() => {});
-  }, []);
+  }, [refreshKey]);
 
   const kpiData = useMemo(() => computeKPIData(riskData, pos, perfMap), [riskData, pos, perfMap]);
   const selectedEntry = useMemo(

@@ -14,6 +14,7 @@ import {
 import { Users, FileText, AlertTriangle, Star, TrendingUp, TrendingDown } from 'lucide-react';
 import { getVendors, getPurchaseOrders, getChartData, Vendor, PurchaseOrder } from '../lib/data';
 import { useAnimatedCounter } from '../lib/useAnimatedCounter';
+import { useRefresh } from '../lib/RefreshContext';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend);
 
@@ -70,15 +71,16 @@ export default function Dashboard() {
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [range, setRange] = useState<RangeOption>('6M');
   const [chartPayload, setChartPayload] = useState<{ months: string[]; counts: number[]; spends: number[]; availableMonths: number }>({ months: [], counts: [], spends: [], availableMonths: 0 });
+  const { refreshKey } = useRefresh();
 
   useEffect(() => {
     getVendors().then(setVendors).catch(() => {});
     getPurchaseOrders().then(setPos).catch(() => {});
-  }, []);
+  }, [refreshKey]);
 
   useEffect(() => {
     getChartData(rangeMonths[range]).then(setChartPayload).catch(() => {});
-  }, [range]);
+  }, [range, refreshKey]);
   const showAvailableNote = chartPayload.availableMonths < rangeMonths[range];
 
   const totalVendors = vendors.length;

@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Search, Plus, Mail, Clock, FileText, ChevronDown, CreditCard as Edit2, Trash2, X, AlertTriangle, Building2, Phone, MapPin, Calendar, Star, FileText as FileTextIcon, Download, StickyNote, Check, Scale, ArrowUp, ArrowDown, Minus } from 'lucide-react';
-import { getVendors, saveVendors, Vendor, generateVendorCode, getPurchaseOrders, getVendorRatings, PurchaseOrder } from '../lib/data';
+import { getVendors, deleteVendor, upsertVendor, Vendor, generateVendorCode, getPurchaseOrders, getVendorRatings, PurchaseOrder } from '../lib/data';
+import { useRefresh } from '../lib/RefreshContext';
 
 async function getOpenPOCount(vendor: Vendor): Promise<number> {
   const pos = await getPurchaseOrders();
@@ -117,6 +118,8 @@ export default function Vendors() {
   const [loading, setLoading] = useState(true);
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [search, setSearch] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const { refreshKey, triggerRefresh } = useRefresh();
 
   useEffect(() => {
     Promise.all([
@@ -127,7 +130,7 @@ export default function Vendors() {
       setPos(p);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+  }, [refreshKey]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [deletingVendor, setDeletingVendor] = useState<Vendor | null>(null);
@@ -199,47 +202,48 @@ export default function Vendors() {
   async function handleSave() {
     if (!validateForm()) return;
 
-    if (editingVendor) {
-      const updated = vendors.map((v) =>
-        v.id === editingVendor.id
-          ? {
-              ...v,
-              name: form.name,
-              contact: form.contact,
-              email: form.email,
-              phone: form.phone,
-              category: form.category,
-              paymentTerms: form.paymentTerms,
-              leadTime: parseInt(form.leadTime, 10) || 7,
-              status: form.status,
-              location: form.location,
-              notes: form.notes,
-            }
-          : v
-      );
-      setVendors(updated);
-      await saveVendors(updated);
-    } else {
-      const vendorCode = await generateVendorCode();
-      const newVendor: Vendor & { notes?: string } = {
-        id: Math.random().toString(36).substring(2, 11),
-        vendorCode,
-        name: form.name,
-        contact: form.contact,
-        email: form.email,
-        phone: form.phone,
-        category: form.category,
-        paymentTerms: form.paymentTerms,
-        leadTime: parseInt(form.leadTime, 10) || 7,
-        status: form.status,
-        location: form.location,
-        score: 70 + Math.floor(Math.random() * 20),
-        contractEnd: '2027-01-01',
-        notes: form.notes,
-      };
-      const updated = [...vendors, newVendor];
-      setVendors(updated);
-      await saveVendors(updated);
+    setIsSaving(true);
+    try {
+      if (editingVendor) {
+        const updatedVendor: Vendor = {
+          ...editingVendor,
+          name: form.name,
+          contact: form.contact,
+          email: form.email,
+          phone: form.phone,
+          category: form.category,
+          paymentTerms: form.paymentTerms,
+          leadTime: parseInt(form.leadTime, 10) || 7,
+          status: form.status,
+          location: form.location,
+          notes: form.notes,
+        };
+        setVendors((prev) => prev.map((v) => v.id === editingVendor.id ? updatedVendor : v));
+        await upsertVendor(updatedVendor);
+      } else {
+        const vendorCode = await generateVendorCode();
+        const newVendor: Vendor = {
+          id: Math.random().toString(36).substring(2, 11),
+          vendorCode,
+          name: form.name,
+          contact: form.contact,
+          email: form.email,
+          phone: form.phone,
+          category: form.category,
+          paymentTerms: form.paymentTerms,
+          leadTime: parseInt(form.leadTime, 10) || 7,
+          status: form.status,
+          location: form.location,
+          score: 70 + Math.floor(Math.random() * 20),
+          contractEnd: '2027-01-01',
+          notes: form.notes,
+        };
+        setVendors((prev) => [...prev, newVendor]);
+        await upsertVendor(newVendor);
+      }
+      triggerRefresh();
+    } finally {
+      setIsSaving(false);
     }
 
     closeModal();
@@ -259,10 +263,11 @@ export default function Vendors() {
 
   async function confirmDelete() {
     if (!deletingVendor) return;
-    const updated = vendors.filter((v) => v.id !== deletingVendor.id);
-    setVendors(updated);
-    await saveVendors(updated);
+    const id = deletingVendor.id;
+    setVendors((prev) => prev.filter((v) => v.id !== id));
     setDeletingVendor(null);
+    await deleteVendor(id);
+    triggerRefresh();
   }
 
   function exportCSV() {
@@ -760,9 +765,10 @@ export default function Vendors() {
               </button>
               <button
                 onClick={handleSave}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+                disabled={isSaving}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {editingVendor ? 'Save Changes' : 'Add Vendor'}
+                {isSaving ? 'Saving...' : editingVendor ? 'Save Changes' : 'Add Vendor'}
               </button>
             </div>
           </div>

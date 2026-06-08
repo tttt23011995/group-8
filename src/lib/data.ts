@@ -427,6 +427,63 @@ export async function deletePurchaseOrder(poId: string): Promise<void> {
   }
 }
 
+export async function upsertPurchaseOrder(po: PurchaseOrder): Promise<void> {
+  try {
+    const { error } = await supabase.from('purchase_orders').upsert({
+      id: po.id,
+      po_number: po.poNumber,
+      vendor_id: po.vendorId,
+      vendor_name: po.vendorName,
+      date: po.date,
+      total: po.total,
+      status: po.status,
+      items: po.items,
+      delivery_date: po.deliveryDate,
+      actual_delivery_date: po.actualDeliveryDate ?? null,
+      line_items: po.lineItems ?? [],
+      subtotal: po.subtotal ?? null,
+      tax: po.tax ?? null,
+      delivery_notes: po.deliveryNotes ?? [],
+    });
+    if (error) console.error('upsertPurchaseOrder:', error);
+  } catch (e) {
+    console.error('upsertPurchaseOrder:', e);
+  }
+}
+
+export async function deletePurchaseOrderById(poId: string): Promise<void> {
+  try {
+    const { error } = await supabase.from('purchase_orders').delete().eq('id', poId);
+    if (error) console.error('deletePurchaseOrderById:', error);
+  } catch (e) {
+    console.error('deletePurchaseOrderById:', e);
+  }
+}
+
+export async function upsertVendor(vendor: Vendor): Promise<void> {
+  try {
+    const { error } = await supabase.from('vendors').upsert({
+      id: vendor.id,
+      vendor_code: vendor.vendorCode,
+      name: vendor.name,
+      category: vendor.category,
+      contact: vendor.contact,
+      email: vendor.email,
+      phone: vendor.phone,
+      lead_time: vendor.leadTime,
+      payment_terms: vendor.paymentTerms,
+      score: vendor.score,
+      status: vendor.status,
+      location: vendor.location,
+      contract_end: vendor.contractEnd,
+      notes: vendor.notes ?? '',
+    });
+    if (error) console.error('upsertVendor:', error);
+  } catch (e) {
+    console.error('upsertVendor:', e);
+  }
+}
+
 export async function saveVendorRatings(ratings: VendorRating[]): Promise<void> {
   try {
     const rows = ratings.map((r) => ({

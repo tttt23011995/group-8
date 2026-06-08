@@ -26,13 +26,14 @@ import {
 } from 'lucide-react';
 import {
   getPurchaseOrders,
-  savePurchaseOrders,
+  upsertPurchaseOrder,
   getDeliveryPerformance,
   saveDeliveryPerformance,
   PurchaseOrder,
   DeliveryPerformance,
   DeliveryNote,
 } from '../lib/data';
+import { useRefresh } from '../lib/RefreshContext';
 
 
 
@@ -330,13 +331,14 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
   const [sortBy, setSortBy] = useState<SortOption>('earliest');
   const [perf, setPerf] = useState<Record<string, DeliveryPerformance>>({});
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const { refreshKey, triggerRefresh } = useRefresh();
 
   useEffect(() => {
     Promise.all([getPurchaseOrders(), getDeliveryPerformance()]).then(([p, d]) => {
       setPos(p);
       setPerf(d);
     }).catch(() => {});
-  }, []);
+  }, [refreshKey]);
 
   const isDeliveredOrLater = (po: PurchaseOrder) =>
     STATUS_ORDER.indexOf(po.status) >= STATUS_ORDER.indexOf('delivered');
@@ -407,12 +409,13 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
   }, []);
 
   const handleSaveNote = useCallback(async (poId: string, notes: DeliveryNote[]) => {
-    const updated = pos.map((po) =>
-      po.id === poId ? { ...po, deliveryNotes: notes } : po
-    );
-    setPos(updated);
-    await savePurchaseOrders(updated);
-  }, [pos]);
+    const updatedPO = pos.find((po) => po.id === poId);
+    if (!updatedPO) return;
+    const withNotes = { ...updatedPO, deliveryNotes: notes };
+    setPos((prev) => prev.map((po) => po.id === poId ? withNotes : po));
+    await upsertPurchaseOrder(withNotes);
+    triggerRefresh();
+  }, [pos, triggerRefresh]);
 
   function toggleNotes(poId: string) {
     setExpandedNotes((prev) => {
@@ -438,7 +441,8 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
     });
 
     setPos(updated);
-    await savePurchaseOrders(updated);
+    const changedPO = updated.find((po) => po.id === poId);
+    if (changedPO) await upsertPurchaseOrder(changedPO);
 
     const newPerf = { ...perf };
     let changed = false;
@@ -455,7 +459,8 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
       setPerf(newPerf);
       await saveDeliveryPerformance(newPerf);
     }
-  }, [pos, perf]);
+    triggerRefresh();
+  }, [pos, perf, triggerRefresh]);
 
   const revertStatus = useCallback(async (poId: string) => {
     const updated = pos.map((po) => {
@@ -471,7 +476,8 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
     });
 
     setPos(updated);
-    await savePurchaseOrders(updated);
+    const changedPO = updated.find((po) => po.id === poId);
+    if (changedPO) await upsertPurchaseOrder(changedPO);
 
     const newPerf = { ...perf };
     let changed = false;
@@ -485,7 +491,8 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
       setPerf(newPerf);
       await saveDeliveryPerformance(newPerf);
     }
-  }, [pos, perf]);
+    triggerRefresh();
+  }, [pos, perf, triggerRefresh]);
 
   const badgeItems: { key: string; label: string; count: number; color: string; bg: string; activeBg: string; pulse: boolean }[] = [
     { key: 'ordered',     label: 'Ordered',    count: counts.ordered,       color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/20',    activeBg: 'bg-blue-600/30 border-blue-500/50',    pulse: false },
