@@ -12,6 +12,10 @@ import {
   History,
   X,
   Info,
+  Eye,
+  EyeOff,
+  Lock,
+  Key,
 } from 'lucide-react';
 import { getVendors, Vendor } from '../lib/data';
 import {
@@ -166,8 +170,19 @@ const LOADING_MESSAGES = [
 ];
 
 const STORAGE_KEY = 'riskAnalyses';
+const SESSION_KEY = 'groq_session_key';
 
-// ── Helpers ──────────────────────────────────────────────────────────────
+// ── Key helpers — never touch React state ────────────────────────────────
+
+function getRuntimeKey(): string {
+  return sessionStorage.getItem(SESSION_KEY) || localStorage.getItem('apiKey') || '';
+}
+
+function hasSessionKey(): boolean {
+  return !!sessionStorage.getItem(SESSION_KEY);
+}
+
+// ── Storage helpers ───────────────────────────────────────────────────────
 
 function getSavedAnalyses(): SavedAnalysis[] {
   try {
@@ -183,9 +198,7 @@ function saveAnalysis(analysis: SavedAnalysis): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify([analysis, ...existing]));
 }
 
-function getApiKey(): string {
-  return localStorage.getItem('apiKey') || '';
-}
+// ── Supplier context builder ──────────────────────────────────────────────
 
 function buildSupplierContext(entry: LegacySupplierRiskEntry): SupplierContext {
   const m: LegacySupplierMetrics = entry.metrics;
@@ -201,14 +214,18 @@ function buildSupplierContext(entry: LegacySupplierRiskEntry): SupplierContext {
     leadTime: m.vendorLeadTime,
     totalOrders: m.totalOrders,
     lateOrders: m.lateOrders,
-    lateDeliveryRate: m.lateOrders > 0 && m.totalOrders > 0
-      ? (m.lateOrders / m.totalOrders) * 100
-      : 0,
+    lateDeliveryRate:
+      m.lateOrders > 0 && m.totalOrders > 0
+        ? (m.lateOrders / m.totalOrders) * 100
+        : 0,
     currentOverdueOrders: m.currentOverdueOrders,
     averageDelayDays: m.averageDelayDays,
     onTimeDeliveryRate: m.onTimeDeliveryRate,
     averageLeadTime: m.averageLeadTime,
-    openPOCount: m.supplierOrderShare > 0 ? Math.round(m.totalOrders * m.supplierOrderShare / 100) : m.totalOrders,
+    openPOCount:
+      m.supplierOrderShare > 0
+        ? Math.round((m.totalOrders * m.supplierOrderShare) / 100)
+        : m.totalOrders,
     supplierSpend: m.supplierSpend,
     supplierSpendShare: m.supplierSpendShare,
     vendorRatingOverall: m.vendorRatingOverall,
@@ -224,12 +241,16 @@ function buildSupplierContext(entry: LegacySupplierRiskEntry): SupplierContext {
     supplierPerformanceRiskScore: r.supplierPerformanceRiskScore,
     detectedRisks: r.detectedRiskTypes.map((type) => ({
       type,
-      severity: type.includes('Delay') || type.includes('Performance') ? 'high' as const : 'medium' as const,
+      severity: type.includes('Delay') || type.includes('Performance')
+        ? ('high' as const)
+        : ('medium' as const),
       scoreImpact: 0,
       message: type,
     })),
   };
 }
+
+// ── Level config ──────────────────────────────────────────────────────────
 
 function levelConfig(level: RiskSubCategory['level']) {
   switch (level) {
@@ -279,8 +300,12 @@ function RiskCard({ title, data }: { title: string; data: RiskSubCategory }) {
   const Icon = cfg.icon;
 
   return (
-    <div className={`relative z-1 rounded-xl border overflow-hidden ${cfg.border} ${cfg.bg} transition-shadow duration-300 hover:shadow-lg hover:shadow-black/20`}>
-      <div className={`${cfg.headerBg} border-b ${cfg.headerBorder} px-5 py-4 flex items-center justify-between`}>
+    <div
+      className={`relative z-1 rounded-xl border overflow-hidden ${cfg.border} ${cfg.bg} transition-shadow duration-300 hover:shadow-lg hover:shadow-black/20`}
+    >
+      <div
+        className={`${cfg.headerBg} border-b ${cfg.headerBorder} px-5 py-4 flex items-center justify-between`}
+      >
         <div className="flex items-center gap-3">
           <Icon className={`w-5 h-5 ${cfg.color}`} />
           <h3 className="text-white font-semibold">{title}</h3>
@@ -294,11 +319,15 @@ function RiskCard({ title, data }: { title: string; data: RiskSubCategory }) {
         <p className="text-sm text-slate-300 leading-relaxed">{data.summary}</p>
 
         <div>
-          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Risk Factors</h4>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            Risk Factors
+          </h4>
           <ul className="space-y-1.5">
             {data.factors.map((f, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-slate-400">
-                <span className={`w-1.5 h-1.5 rounded-full ${cfg.barFill} flex-shrink-0 mt-1.5`} />
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${cfg.barFill} flex-shrink-0 mt-1.5`}
+                />
                 {f}
               </li>
             ))}
@@ -306,11 +335,15 @@ function RiskCard({ title, data }: { title: string; data: RiskSubCategory }) {
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Mitigation Steps</h4>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            Mitigation Steps
+          </h4>
           <ol className="space-y-1.5">
             {data.mitigations.map((m, i) => (
               <li key={i} className="flex items-start gap-2.5 text-sm text-slate-300">
-                <span className={`w-5 h-5 rounded-full ${cfg.barBg} flex items-center justify-center text-[10px] font-bold ${cfg.color} flex-shrink-0`}>
+                <span
+                  className={`w-5 h-5 rounded-full ${cfg.barBg} flex items-center justify-center text-[10px] font-bold ${cfg.color} flex-shrink-0`}
+                >
                   {i + 1}
                 </span>
                 {m}
@@ -345,7 +378,10 @@ function HistoryPanel({
             <History className="w-5 h-5 text-blue-400" />
             <h2 className="text-lg font-bold text-white">Analysis History</h2>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -366,13 +402,21 @@ function HistoryPanel({
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-white font-medium text-sm">{a.vendorName}</span>
                   <span className="text-xs text-slate-500">
-                    {new Date(a.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    {new Date(a.timestamp).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs text-blue-400">{a.category}</span>
                   <span className="text-xs text-slate-600">|</span>
-                  <span className="text-xs text-slate-400">${a.annualSpend.toLocaleString()} annual</span>
+                  <span className="text-xs text-slate-400">
+                    ${a.annualSpend.toLocaleString()} annual
+                  </span>
                   {a.demoMode && (
                     <>
                       <span className="text-xs text-slate-600">|</span>
@@ -385,7 +429,10 @@ function HistoryPanel({
                     const cfg = levelConfig(a.result[key].level);
                     const Icon = cfg.icon;
                     return (
-                      <span key={key} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border ${cfg.badge}`}>
+                      <span
+                        key={key}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border ${cfg.badge}`}
+                      >
                         <Icon className="w-2.5 h-2.5" />
                         {a.result[key].level}
                       </span>
@@ -393,7 +440,10 @@ function HistoryPanel({
                   })}
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); onDelete(a.id); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(a.id);
+                  }}
                   className="mt-2 text-xs text-slate-600 hover:text-red-400 transition-colors"
                 >
                   Delete
@@ -407,12 +457,16 @@ function HistoryPanel({
   );
 }
 
-// ── Supplier Context Badge ───────────────────────────────────────────────
+// ── Supplier Context Badge ────────────────────────────────────────────────
 
 function SupplierContextBadge({ ctx }: { ctx: SupplierContext }) {
   const riskLevelLower = ctx.riskLevel.toLowerCase() as 'low' | 'medium' | 'high';
-  const colorMap = { low: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/25', medium: 'text-yellow-400 bg-yellow-500/15 border-yellow-500/25', high: 'text-red-400 bg-red-500/15 border-red-500/25' };
-  const cls = colorMap[riskLevelLower] || colorMap.medium;
+  const colorMap = {
+    low: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/25',
+    medium: 'text-yellow-400 bg-yellow-500/15 border-yellow-500/25',
+    high: 'text-red-400 bg-red-500/15 border-red-500/25',
+  };
+  const cls = colorMap[riskLevelLower] ?? colorMap.medium;
 
   return (
     <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 space-y-3">
@@ -425,11 +479,27 @@ function SupplierContextBadge({ ctx }: { ctx: SupplierContext }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
         <div>
           <span className="text-slate-500">Status</span>
-          <p className={`font-semibold ${ctx.status === 'active' ? 'text-emerald-400' : 'text-slate-400'}`}>{ctx.status}</p>
+          <p
+            className={`font-semibold ${
+              ctx.status === 'active' ? 'text-emerald-400' : 'text-slate-400'
+            }`}
+          >
+            {ctx.status}
+          </p>
         </div>
         <div>
           <span className="text-slate-500">On-Time Rate</span>
-          <p className={`font-semibold ${ctx.onTimeDeliveryRate >= 90 ? 'text-emerald-400' : ctx.onTimeDeliveryRate >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>{ctx.onTimeDeliveryRate}%</p>
+          <p
+            className={`font-semibold ${
+              ctx.onTimeDeliveryRate >= 90
+                ? 'text-emerald-400'
+                : ctx.onTimeDeliveryRate >= 70
+                ? 'text-yellow-400'
+                : 'text-red-400'
+            }`}
+          >
+            {ctx.onTimeDeliveryRate}%
+          </p>
         </div>
         <div>
           <span className="text-slate-500">Total Spend</span>
@@ -437,12 +507,21 @@ function SupplierContextBadge({ ctx }: { ctx: SupplierContext }) {
         </div>
         <div>
           <span className="text-slate-500">Late Orders</span>
-          <p className={`font-semibold ${ctx.lateOrders > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{ctx.lateOrders}</p>
+          <p
+            className={`font-semibold ${
+              ctx.lateOrders > 0 ? 'text-red-400' : 'text-emerald-400'
+            }`}
+          >
+            {ctx.lateOrders}
+          </p>
         </div>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {ctx.detectedRisks.map((r, i) => (
-          <span key={i} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+          <span
+            key={i}
+            className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/20"
+          >
             {r.type}
           </span>
         ))}
@@ -456,7 +535,98 @@ function SupplierContextBadge({ ctx }: { ctx: SupplierContext }) {
   );
 }
 
-// ── Main Component ───────────────────────────────────────────────────────
+// ── API Key Manager (inside Demo Mode card) ───────────────────────────────
+
+function ApiKeyManager({ onKeyChange }: { onKeyChange: () => void }) {
+  const [inputValue, setInputValue] = useState('');
+  const [showInput, setShowInput] = useState(false);
+  const [keyLoaded, setKeyLoaded] = useState(() => hasSessionKey());
+
+  function handleSave() {
+    const trimmed = inputValue.trim();
+    if (!trimmed) return;
+    sessionStorage.setItem(SESSION_KEY, trimmed);
+    setInputValue('');
+    setKeyLoaded(true);
+    onKeyChange();
+  }
+
+  function handleClear() {
+    sessionStorage.removeItem(SESSION_KEY);
+    setInputValue('');
+    setKeyLoaded(false);
+    onKeyChange();
+  }
+
+  return (
+    <div className="mt-4 pt-4 border-t border-blue-900/30 space-y-3">
+      <div className="flex items-center gap-2">
+        <Key className="w-4 h-4 text-blue-400 flex-shrink-0" />
+        <p className="text-xs font-semibold text-slate-300">Groq API Key</p>
+        <span
+          className={`ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+            keyLoaded
+              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+              : 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'
+          }`}
+        >
+          <Lock className="w-2.5 h-2.5" />
+          {keyLoaded ? 'Key loaded (session only)' : 'No key — Demo Mode active'}
+        </span>
+      </div>
+
+      {!keyLoaded && (
+        <div className="space-y-2">
+          <div className="relative">
+            <input
+              type={showInput ? 'text' : 'password'}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+              placeholder="Paste your Groq API key (gsk_...)"
+              className="w-full px-3 py-2 pr-10 bg-navy-700 border border-blue-900/40 rounded-lg text-white placeholder-slate-600 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <button
+              type="button"
+              onClick={() => setShowInput((v) => !v)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              {showInput ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSave}
+              disabled={!inputValue.trim()}
+              className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              Save for session
+            </button>
+          </div>
+        </div>
+      )}
+
+      {keyLoaded && (
+        <button
+          onClick={handleClear}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold rounded-lg transition-colors border border-red-500/20"
+        >
+          <X className="w-3 h-3" />
+          Clear key
+        </button>
+      )}
+
+      <p className="text-[10px] text-slate-600 leading-relaxed">
+        Your key is stored in sessionStorage only and cleared when you close this tab.
+        It is never written to disk or localStorage.
+      </p>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────
 
 export default function AIRisk() {
   const vendors = useMemo(() => getVendors(), []);
@@ -465,8 +635,8 @@ export default function AIRisk() {
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [supplierCtx, setSupplierCtx] = useState<SupplierContext | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
-  const [demoMode, setDemoMode] = useState(false);
-  const [autoDemoBanner, setAutoDemoBanner] = useState(false);
+  const [demoMode, setDemoMode] = useState(() => !getRuntimeKey());
+  const [autoDemoBanner, setAutoDemoBanner] = useState(() => !getRuntimeKey());
   const [loading, setLoading] = useState(false);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [result, setResult] = useState<RiskAnalysis | null>(null);
@@ -475,14 +645,17 @@ export default function AIRisk() {
   const [history, setHistory] = useState<SavedAnalysis[]>(() => getSavedAnalyses());
   const loadingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-detect missing API key
-  useEffect(() => {
-    const key = getApiKey();
-    if (!key) {
+  // Called whenever the session key state changes
+  function handleKeyChange() {
+    const hasKey = !!getRuntimeKey();
+    if (hasKey) {
+      setDemoMode(false);
+      setAutoDemoBanner(false);
+    } else {
       setDemoMode(true);
       setAutoDemoBanner(true);
     }
-  }, []);
+  }
 
   // Loading message cycling
   useEffect(() => {
@@ -499,7 +672,6 @@ export default function AIRisk() {
     };
   }, [loading]);
 
-  // When vendor selected from dropdown, build SupplierContext and pre-fill form
   function handleVendorSelect(vendorId: string) {
     if (!vendorId) {
       setSelectedVendorId(null);
@@ -514,14 +686,16 @@ export default function AIRisk() {
     if (entry) {
       const ctx = buildSupplierContext(entry);
       setSupplierCtx(ctx);
-
       setForm({
         vendorName: ctx.vendorName,
         category: ctx.category,
         annualSpend: String(Math.round(ctx.supplierSpend)),
         alternativeSuppliers: '0',
         avgDeliveryDelay: String(ctx.averageDelayDays),
-        avgQualityScore: ctx.vendorRatingQuality !== null ? String(Math.round(ctx.vendorRatingQuality / 20)) : '3',
+        avgQualityScore:
+          ctx.vendorRatingQuality !== null
+            ? String(Math.round(ctx.vendorRatingQuality / 20))
+            : '3',
         paymentTerms: ctx.paymentTerms || 'Net 30',
         notes: '',
       });
@@ -552,9 +726,10 @@ export default function AIRisk() {
     setResult(null);
     setLoading(true);
 
-    // Build userPrompt
-    const userPrompt = selectedVendorId && supplierCtx
-      ? `You are analyzing procurement risk for a vendor with the following LIVE DATA pulled from our procurement system.
+    // Build prompts
+    const userPrompt =
+      selectedVendorId && supplierCtx
+        ? `You are analyzing procurement risk for a vendor with the following LIVE DATA pulled from our procurement system.
 
 === VENDOR PROFILE ===
 Name: ${supplierCtx.vendorName}
@@ -577,7 +752,12 @@ Open (Unfulfilled) POs: ${supplierCtx.openPOCount}
 === FINANCIAL EXPOSURE ===
 Annual Spend with this Vendor: $${supplierCtx.supplierSpend.toLocaleString()}
 Spend Share of Total Procurement: ${supplierCtx.supplierSpendShare}%
-Manually Provided Annual Spend Override: ${form.annualSpend && form.annualSpend !== String(Math.round(supplierCtx.supplierSpend)) ? '$' + parseInt(form.annualSpend).toLocaleString() : 'None'}
+Manually Provided Annual Spend Override: ${
+            form.annualSpend &&
+            form.annualSpend !== String(Math.round(supplierCtx.supplierSpend))
+              ? '$' + parseInt(form.annualSpend).toLocaleString()
+              : 'None'
+          }
 
 === VENDOR RATINGS (1-100 scale) ===
 Overall: ${supplierCtx.vendorRatingOverall ?? 'Not rated'}
@@ -594,9 +774,13 @@ Overall Risk Score: ${supplierCtx.overallRiskScore}/100 (${supplierCtx.riskLevel
   - Performance Risk: ${supplierCtx.supplierPerformanceRiskScore}/15
 
 === DETECTED RISK FLAGS ===
-${supplierCtx.detectedRisks.length > 0
-  ? supplierCtx.detectedRisks.map(r => `[${r.severity.toUpperCase()}] ${r.type}: ${r.message}`).join('\n')
-  : 'No risk flags detected'}
+${
+  supplierCtx.detectedRisks.length > 0
+    ? supplierCtx.detectedRisks
+        .map((r) => `[${r.severity.toUpperCase()}] ${r.type}: ${r.message}`)
+        .join('\n')
+    : 'No risk flags detected'
+}
 
 === ALTERNATIVE SUPPLIERS ===
 Known Alternative Suppliers: ${form.alternativeSuppliers} (0 = sole source dependency)
@@ -608,7 +792,7 @@ Based on ALL of the above real procurement data, provide a comprehensive risk as
 with specific, data-driven observations. Reference actual numbers from the data above
 (e.g., mention the specific late rate, the spend share percentage, the risk scores).
 Do NOT give generic advice — tailor every factor and mitigation to this vendor's actual data.`
-      : `Analyze procurement risk for:
+        : `Analyze procurement risk for:
 Vendor: ${form.vendorName}
 Product Category: ${form.category}
 Annual Spend: $${parseInt(form.annualSpend) || 0}
@@ -640,6 +824,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
   }
 }`;
 
+    // Demo mode path
     if (demoMode) {
       await new Promise((r) => setTimeout(r, 1800));
       const analysis: SavedAnalysis = {
@@ -659,31 +844,51 @@ Recent Issues: ${form.notes || 'None reported'}`;
       return;
     }
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      setError('No API key configured. Please add your Anthropic API key in Settings.');
+    // Read key fresh — never from state
+    const runtimeKey =
+      sessionStorage.getItem(SESSION_KEY) || localStorage.getItem('apiKey') || '';
+
+    if (!runtimeKey) {
+      // Auto-fallback to demo mode rather than throwing
+      setDemoMode(true);
+      await new Promise((r) => setTimeout(r, 1800));
+      const analysis: SavedAnalysis = {
+        id: Math.random().toString(36).substring(2, 11),
+        timestamp: new Date().toISOString(),
+        vendorName: form.vendorName,
+        category: form.category,
+        annualSpend: parseInt(form.annualSpend) || 0,
+        result: DEMO_RESULT,
+        demoMode: true,
+        selectedVendorId,
+      };
+      saveAnalysis(analysis);
+      setHistory(getSavedAnalyses());
+      setResult(DEMO_RESULT);
       setLoading(false);
       return;
     }
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
+          Authorization: `Bearer ${runtimeKey}`,
         },
         body: JSON.stringify({
-          model: 'claude-haiku-20240307',
-          max_tokens: 2048,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
+          model: 'llama-3.3-70b-versatile',
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
         }),
       });
 
       if (res.status === 401) {
-        setError('Invalid API key. Please check your key in Settings.');
+        setError('Invalid API key. Please check your Groq key and try again.');
         setLoading(false);
         return;
       }
@@ -696,23 +901,22 @@ Recent Issues: ${form.notes || 'None reported'}`;
       }
 
       const data = await res.json();
-      const textBlock = data?.content?.find((c: { type: string }) => c.type === 'text');
-      const rawText = textBlock?.text || '';
+      const content = data?.choices?.[0]?.message?.content ?? '';
 
       let parsed: RiskAnalysis;
       try {
-        const cleaned = rawText.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-        parsed = JSON.parse(cleaned);
-      } catch (parseErr) {
-        console.error('Raw AI response:', rawText);
-        console.error('Parse error:', parseErr);
+        parsed = JSON.parse(content);
+      } catch {
         setError('AI response was unreadable. Please try again.');
         setLoading(false);
         return;
       }
 
-      if (!parsed.supplyChain?.level || !parsed.financial?.level || !parsed.operational?.level) {
-        console.error('Malformed response:', parsed);
+      if (
+        !parsed.supplyChain?.level ||
+        !parsed.financial?.level ||
+        !parsed.operational?.level
+      ) {
         setError('AI response was unreadable. Please try again.');
         setLoading(false);
         return;
@@ -735,7 +939,6 @@ Recent Issues: ${form.notes || 'None reported'}`;
       if (err instanceof TypeError && err.message.includes('fetch')) {
         setError('Connection failed. Check your internet and try again.');
       } else {
-        console.error('Unexpected error:', err);
         setError('An unexpected error occurred. Please try again.');
       }
     } finally {
@@ -778,7 +981,9 @@ Recent Issues: ${form.notes || 'None reported'}`;
             <ShieldAlert className="w-7 h-7 text-blue-400" />
             AI Risk Analyzer
           </h1>
-          <p className="text-slate-400 text-sm mt-1">AI-powered procurement risk assessment with mitigation strategies</p>
+          <p className="text-slate-400 text-sm mt-1">
+            AI-powered procurement risk assessment with mitigation strategies
+          </p>
         </div>
         <button
           onClick={() => setShowHistory(true)}
@@ -789,53 +994,68 @@ Recent Issues: ${form.notes || 'None reported'}`;
         </button>
       </div>
 
-      {/* API Key Banner */}
+      {/* Auto Demo Banner */}
       {autoDemoBanner && (
         <div className="relative z-1 bg-yellow-500/10 border border-yellow-500/25 rounded-xl px-5 py-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm text-yellow-300 font-medium">No API key configured — running in Demo Mode</p>
+            <p className="text-sm text-yellow-300 font-medium">
+              No Groq API key found — running in Demo Mode
+            </p>
             <p className="text-xs text-yellow-400/70 mt-1">
-              Add your Anthropic API key to localStorage as "apiKey" to enable live AI analysis.
+              Paste your Groq key in the panel below to enable live AI analysis.
             </p>
           </div>
-          <button onClick={() => setAutoDemoBanner(false)} className="text-yellow-400/50 hover:text-yellow-400 transition-colors">
+          <button
+            onClick={() => setAutoDemoBanner(false)}
+            className="text-yellow-400/50 hover:text-yellow-400 transition-colors"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Demo Mode Toggle */}
-      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl px-5 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${demoMode ? 'bg-yellow-500/15' : 'bg-blue-500/15'}`}>
-            {demoMode ? (
-              <AlertCircle className="w-4 h-4 text-yellow-400" />
-            ) : (
-              <ShieldAlert className="w-4 h-4 text-blue-400" />
-            )}
+      {/* Demo Mode Toggle + API Key Manager */}
+      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl px-5 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                demoMode ? 'bg-yellow-500/15' : 'bg-blue-500/15'
+              }`}
+            >
+              {demoMode ? (
+                <AlertCircle className="w-4 h-4 text-yellow-400" />
+              ) : (
+                <ShieldAlert className="w-4 h-4 text-blue-400" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm text-white font-medium">Demo Mode</p>
+              <p className="text-xs text-slate-500">
+                {demoMode
+                  ? 'Using example data — no API calls'
+                  : 'Live AI analysis via Groq (llama-3.3-70b-versatile)'}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-white font-medium">Demo Mode</p>
-            <p className="text-xs text-slate-500">
-              {demoMode ? 'Using example data — no API calls' : 'Live AI analysis via Anthropic API'}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => setDemoMode(!demoMode)}
-          className={`relative w-12 h-7 rounded-full transition-colors duration-200 flex-shrink-0 ${
-            demoMode ? 'bg-yellow-500' : 'bg-blue-600'
-          }`}
-          role="switch"
-          aria-checked={demoMode}
-        >
-          <span
-            className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform duration-200 ${
-              demoMode ? 'translate-x-5' : 'translate-x-0'
+          <button
+            onClick={() => setDemoMode((v) => !v)}
+            className={`relative w-12 h-7 rounded-full transition-colors duration-200 flex-shrink-0 ${
+              demoMode ? 'bg-yellow-500' : 'bg-blue-600'
             }`}
-          />
-        </button>
+            role="switch"
+            aria-checked={!demoMode}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform duration-200 ${
+                demoMode ? 'translate-x-0' : 'translate-x-5'
+              }`}
+            />
+          </button>
+        </div>
+
+        <ApiKeyManager onKeyChange={handleKeyChange} />
       </div>
 
       {/* Input Form */}
@@ -855,7 +1075,9 @@ Recent Issues: ${form.notes || 'None reported'}`;
               >
                 <option value="">Select a vendor...</option>
                 {vendors.map((v: Vendor) => (
-                  <option key={v.id} value={v.id}>{v.name} ({v.category})</option>
+                  <option key={v.id} value={v.id}>
+                    {v.name} ({v.category})
+                  </option>
                 ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
@@ -872,11 +1094,10 @@ Recent Issues: ${form.notes || 'None reported'}`;
           </div>
         </div>
 
-        {/* Supplier context preview */}
         {supplierCtx && <SupplierContextBadge ctx={supplierCtx} />}
 
         <div className="space-y-4 mt-5">
-          {/* Row 1: Vendor Name + Category */}
+          {/* Row 1 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-slate-400 mb-1.5">
@@ -899,7 +1120,9 @@ Recent Issues: ${form.notes || 'None reported'}`;
                   className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
                 >
                   {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
@@ -907,14 +1130,15 @@ Recent Issues: ${form.notes || 'None reported'}`;
             </div>
           </div>
 
-          {/* Row 2: Spend + Suppliers + Delay */}
+          {/* Row 2 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm text-slate-400 mb-1.5">
                 Annual Spend (USD)
-                {supplierCtx && form.annualSpend !== String(Math.round(supplierCtx.supplierSpend)) && (
-                  <span className="text-blue-400 ml-1 text-xs">(override)</span>
-                )}
+                {supplierCtx &&
+                  form.annualSpend !== String(Math.round(supplierCtx.supplierSpend)) && (
+                    <span className="text-blue-400 ml-1 text-xs">(override)</span>
+                  )}
               </label>
               <input
                 type="number"
@@ -950,7 +1174,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
             </div>
           </div>
 
-          {/* Row 3: Quality + Payment Terms */}
+          {/* Row 3 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-slate-400 mb-1.5">
@@ -977,7 +1201,9 @@ Recent Issues: ${form.notes || 'None reported'}`;
                   className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
                 >
                   {PAYMENT_TERMS.map((pt) => (
-                    <option key={pt} value={pt}>{pt}</option>
+                    <option key={pt} value={pt}>
+                      {pt}
+                    </option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
@@ -985,7 +1211,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
             </div>
           </div>
 
-          {/* Row 4: Notes */}
+          {/* Row 4 */}
           <div>
             <label className="block text-sm text-slate-400 mb-1.5">Recent Issues or Notes</label>
             <textarea
@@ -1033,7 +1259,8 @@ Recent Issues: ${form.notes || 'None reported'}`;
           </div>
           {supplierCtx && (
             <p className="text-xs text-slate-500 mt-3">
-              Analyzing live data for <span className="text-blue-400">{supplierCtx.vendorName}</span>
+              Analyzing live data for{' '}
+              <span className="text-blue-400">{supplierCtx.vendorName}</span>
             </p>
           )}
         </div>
@@ -1065,11 +1292,19 @@ Recent Issues: ${form.notes || 'None reported'}`;
             <h2 className="text-lg font-bold text-white">Risk Assessment Results</h2>
             <div className="flex items-center gap-2 flex-wrap">
               {(['supplyChain', 'financial', 'operational'] as const).map((key) => {
-                const label = key === 'supplyChain' ? 'Supply Chain' : key === 'financial' ? 'Financial' : 'Operational';
+                const label =
+                  key === 'supplyChain'
+                    ? 'Supply Chain'
+                    : key === 'financial'
+                    ? 'Financial'
+                    : 'Operational';
                 const cfg = levelConfig(result[key].level);
                 const Icon = cfg.icon;
                 return (
-                  <span key={key} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.badge}`}>
+                  <span
+                    key={key}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.badge}`}
+                  >
                     <Icon className="w-3 h-3" />
                     {label}: {result[key].level}
                   </span>
@@ -1082,8 +1317,9 @@ Recent Issues: ${form.notes || 'None reported'}`;
             <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl px-5 py-3 flex items-center gap-2">
               <Info className="w-4 h-4 text-blue-400" />
               <p className="text-xs text-slate-400">
-                Analysis based on live procurement data for <span className="text-blue-400 font-medium">{supplierCtx.vendorName}</span>
-                {' '}(Overall Risk: {supplierCtx.overallRiskScore}/100, {supplierCtx.riskLevel} Risk)
+                Analysis based on live procurement data for{' '}
+                <span className="text-blue-400 font-medium">{supplierCtx.vendorName}</span>{' '}
+                (Overall Risk: {supplierCtx.overallRiskScore}/100, {supplierCtx.riskLevel} Risk)
               </p>
             </div>
           )}
@@ -1096,7 +1332,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
 
           {demoMode && (
             <p className="text-center text-xs text-slate-600 mt-2">
-              Results generated in Demo Mode. Enable live analysis with a valid API key.
+              Results generated in Demo Mode. Add a Groq API key above to enable live analysis.
             </p>
           )}
         </div>
