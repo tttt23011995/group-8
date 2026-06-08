@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   ShieldAlert,
   AlertTriangle,
@@ -11,12 +11,20 @@ import {
   ChevronRight,
   History,
   X,
+  Info,
 } from 'lucide-react';
 import { getVendors, Vendor } from '../lib/data';
+import {
+  buildSupplierRiskData,
+  RiskCategory,
+  LegacySupplierMetrics,
+  LegacySupplierRisk,
+  LegacySupplierRiskEntry,
+} from '../lib/supplierRisk';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
-interface RiskCategory {
+interface RiskSubCategory {
   level: 'High' | 'Medium' | 'Low';
   summary: string;
   factors: string[];
@@ -24,9 +32,9 @@ interface RiskCategory {
 }
 
 interface RiskAnalysis {
-  supplyChain: RiskCategory;
-  financial: RiskCategory;
-  operational: RiskCategory;
+  supplyChain: RiskSubCategory;
+  financial: RiskSubCategory;
+  operational: RiskSubCategory;
 }
 
 interface SavedAnalysis {
@@ -37,6 +45,39 @@ interface SavedAnalysis {
   annualSpend: number;
   result: RiskAnalysis;
   demoMode: boolean;
+  selectedVendorId: string | null;
+}
+
+interface SupplierContext {
+  vendorName: string;
+  category: string;
+  location: string;
+  status: string;
+  contractEnd: string;
+  paymentTerms: string;
+  leadTime: number;
+  totalOrders: number;
+  lateOrders: number;
+  lateDeliveryRate: number;
+  currentOverdueOrders: number;
+  averageDelayDays: number;
+  onTimeDeliveryRate: number;
+  averageLeadTime: number;
+  openPOCount: number;
+  supplierSpend: number;
+  supplierSpendShare: number;
+  vendorRatingOverall: number | null;
+  vendorRatingDelivery: number | null;
+  vendorRatingQuality: number | null;
+  vendorRatingCost: number | null;
+  overallRiskScore: number;
+  riskLevel: string;
+  deliveryDelayRiskScore: number;
+  leadTimeRiskScore: number;
+  supplierDependencyRiskScore: number;
+  costConcentrationRiskScore: number;
+  supplierPerformanceRiskScore: number;
+  detectedRisks: RiskCategory[];
 }
 
 interface FormData {
@@ -50,7 +91,7 @@ interface FormData {
   notes: string;
 }
 
-const CATEGORIES = ['Electronics', 'Logistics', 'Raw Materials', 'Office Supplies', 'IT Services'] as const;
+const CATEGORIES = ['Electronics', 'Logistics', 'Raw Materials', 'Office Supplies', 'IT Services', 'Packaging', 'Chemicals'] as const;
 const PAYMENT_TERMS = ['Net 30', 'Net 60', 'Net 90'] as const;
 
 const emptyForm: FormData = {
@@ -146,7 +187,51 @@ function getApiKey(): string {
   return localStorage.getItem('apiKey') || '';
 }
 
-function levelConfig(level: RiskCategory['level']) {
+function buildSupplierContext(entry: LegacySupplierRiskEntry): SupplierContext {
+  const m: LegacySupplierMetrics = entry.metrics;
+  const r: LegacySupplierRisk = entry.risk;
+
+  return {
+    vendorName: m.vendorName,
+    category: m.vendor.category,
+    location: m.vendor.location,
+    status: m.vendor.status,
+    contractEnd: m.vendor.contractEnd,
+    paymentTerms: m.vendor.paymentTerms,
+    leadTime: m.vendorLeadTime,
+    totalOrders: m.totalOrders,
+    lateOrders: m.lateOrders,
+    lateDeliveryRate: m.lateOrders > 0 && m.totalOrders > 0
+      ? (m.lateOrders / m.totalOrders) * 100
+      : 0,
+    currentOverdueOrders: m.currentOverdueOrders,
+    averageDelayDays: m.averageDelayDays,
+    onTimeDeliveryRate: m.onTimeDeliveryRate,
+    averageLeadTime: m.averageLeadTime,
+    openPOCount: m.supplierOrderShare > 0 ? Math.round(m.totalOrders * m.supplierOrderShare / 100) : m.totalOrders,
+    supplierSpend: m.supplierSpend,
+    supplierSpendShare: m.supplierSpendShare,
+    vendorRatingOverall: m.vendorRatingOverall,
+    vendorRatingDelivery: m.vendorRatingDelivery,
+    vendorRatingQuality: m.vendorRatingQuality,
+    vendorRatingCost: m.vendorRatingCost,
+    overallRiskScore: r.overallRiskScore,
+    riskLevel: r.riskLevel,
+    deliveryDelayRiskScore: r.deliveryDelayRiskScore,
+    leadTimeRiskScore: r.leadTimeRiskScore,
+    supplierDependencyRiskScore: r.supplierDependencyRiskScore,
+    costConcentrationRiskScore: r.costConcentrationRiskScore,
+    supplierPerformanceRiskScore: r.supplierPerformanceRiskScore,
+    detectedRisks: r.detectedRiskTypes.map((type) => ({
+      type,
+      severity: type.includes('Delay') || type.includes('Performance') ? 'high' as const : 'medium' as const,
+      scoreImpact: 0,
+      message: type,
+    })),
+  };
+}
+
+function levelConfig(level: RiskSubCategory['level']) {
   switch (level) {
     case 'High':
       return {
@@ -189,7 +274,7 @@ function levelConfig(level: RiskCategory['level']) {
 
 // ── Risk Card ────────────────────────────────────────────────────────────
 
-function RiskCard({ title, data }: { title: string; data: RiskCategory }) {
+function RiskCard({ title, data }: { title: string; data: RiskSubCategory }) {
   const cfg = levelConfig(data.level);
   const Icon = cfg.icon;
 
@@ -322,10 +407,63 @@ function HistoryPanel({
   );
 }
 
+// ── Supplier Context Badge ───────────────────────────────────────────────
+
+function SupplierContextBadge({ ctx }: { ctx: SupplierContext }) {
+  const riskLevelLower = ctx.riskLevel.toLowerCase() as 'low' | 'medium' | 'high';
+  const colorMap = { low: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/25', medium: 'text-yellow-400 bg-yellow-500/15 border-yellow-500/25', high: 'text-red-400 bg-red-500/15 border-red-500/25' };
+  const cls = colorMap[riskLevelLower] || colorMap.medium;
+
+  return (
+    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold text-white">Live Vendor Data Loaded</h3>
+        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${cls}`}>
+          {ctx.riskLevel} Risk ({ctx.overallRiskScore}/100)
+        </span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <div>
+          <span className="text-slate-500">Status</span>
+          <p className={`font-semibold ${ctx.status === 'active' ? 'text-emerald-400' : 'text-slate-400'}`}>{ctx.status}</p>
+        </div>
+        <div>
+          <span className="text-slate-500">On-Time Rate</span>
+          <p className={`font-semibold ${ctx.onTimeDeliveryRate >= 90 ? 'text-emerald-400' : ctx.onTimeDeliveryRate >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>{ctx.onTimeDeliveryRate}%</p>
+        </div>
+        <div>
+          <span className="text-slate-500">Total Spend</span>
+          <p className="font-semibold text-white">${ctx.supplierSpend.toLocaleString()}</p>
+        </div>
+        <div>
+          <span className="text-slate-500">Late Orders</span>
+          <p className={`font-semibold ${ctx.lateOrders > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{ctx.lateOrders}</p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {ctx.detectedRisks.map((r, i) => (
+          <span key={i} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+            {r.type}
+          </span>
+        ))}
+        {ctx.detectedRisks.length === 0 && (
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            No risk flags detected
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ───────────────────────────────────────────────────────
 
 export default function AIRisk() {
   const vendors = useMemo(() => getVendors(), []);
+  const riskEntries = useMemo(() => buildSupplierRiskData(), []);
+
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const [supplierCtx, setSupplierCtx] = useState<SupplierContext | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
   const [demoMode, setDemoMode] = useState(false);
   const [autoDemoBanner, setAutoDemoBanner] = useState(false);
@@ -361,20 +499,50 @@ export default function AIRisk() {
     };
   }, [loading]);
 
+  // When vendor selected from dropdown, build SupplierContext and pre-fill form
   function handleVendorSelect(vendorId: string) {
     if (!vendorId) {
-      setForm({ ...form, vendorName: '' });
+      setSelectedVendorId(null);
+      setSupplierCtx(null);
+      setForm(emptyForm);
       return;
     }
-    const v = vendors.find((vr: Vendor) => vr.id === vendorId);
-    if (v) {
+
+    setSelectedVendorId(vendorId);
+
+    const entry = riskEntries.find((e) => e.risk.vendorId === vendorId);
+    if (entry) {
+      const ctx = buildSupplierContext(entry);
+      setSupplierCtx(ctx);
+
       setForm({
-        ...form,
-        vendorName: v.name,
-        category: v.category,
-        paymentTerms: v.paymentTerms || 'Net 30',
+        vendorName: ctx.vendorName,
+        category: ctx.category,
+        annualSpend: String(Math.round(ctx.supplierSpend)),
+        alternativeSuppliers: '0',
+        avgDeliveryDelay: String(ctx.averageDelayDays),
+        avgQualityScore: ctx.vendorRatingQuality !== null ? String(Math.round(ctx.vendorRatingQuality / 20)) : '3',
+        paymentTerms: ctx.paymentTerms || 'Net 30',
+        notes: '',
       });
+    } else {
+      const v = vendors.find((vr: Vendor) => vr.id === vendorId);
+      if (v) {
+        setSupplierCtx(null);
+        setForm({
+          ...emptyForm,
+          vendorName: v.name,
+          category: v.category,
+          paymentTerms: v.paymentTerms || 'Net 30',
+        });
+      }
     }
+  }
+
+  function clearVendorSelection() {
+    setSelectedVendorId(null);
+    setSupplierCtx(null);
+    setForm(emptyForm);
   }
 
   const handleAnalyze = useCallback(async () => {
@@ -384,32 +552,63 @@ export default function AIRisk() {
     setResult(null);
     setLoading(true);
 
-    if (demoMode) {
-      await new Promise((r) => setTimeout(r, 1800));
-      const analysis: SavedAnalysis = {
-        id: Math.random().toString(36).substring(2, 11),
-        timestamp: new Date().toISOString(),
-        vendorName: form.vendorName,
-        category: form.category,
-        annualSpend: parseInt(form.annualSpend) || 0,
-        result: DEMO_RESULT,
-        demoMode: true,
-      };
-      saveAnalysis(analysis);
-      setHistory(getSavedAnalyses());
-      setResult(DEMO_RESULT);
-      setLoading(false);
-      return;
-    }
+    // Build userPrompt
+    const userPrompt = selectedVendorId && supplierCtx
+      ? `You are analyzing procurement risk for a vendor with the following LIVE DATA pulled from our procurement system.
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      setError('No API key configured. Please add your Anthropic API key in Settings.');
-      setLoading(false);
-      return;
-    }
+=== VENDOR PROFILE ===
+Name: ${supplierCtx.vendorName}
+Category: ${supplierCtx.category}
+Location: ${supplierCtx.location}
+Status: ${supplierCtx.status}
+Contract Expiry: ${supplierCtx.contractEnd}
+Payment Terms: ${supplierCtx.paymentTerms}
+Declared Lead Time: ${supplierCtx.leadTime} days
 
-    const userPrompt = `Analyze procurement risk for:
+=== HISTORICAL PERFORMANCE (from order history) ===
+Total Orders Placed: ${supplierCtx.totalOrders}
+Late Orders: ${supplierCtx.lateOrders} (${supplierCtx.lateDeliveryRate.toFixed(1)}% late rate)
+Currently Overdue POs: ${supplierCtx.currentOverdueOrders}
+Average Delay When Late: ${supplierCtx.averageDelayDays} days
+On-Time Delivery Rate: ${supplierCtx.onTimeDeliveryRate}%
+Actual Average Lead Time: ${supplierCtx.averageLeadTime} days
+Open (Unfulfilled) POs: ${supplierCtx.openPOCount}
+
+=== FINANCIAL EXPOSURE ===
+Annual Spend with this Vendor: $${supplierCtx.supplierSpend.toLocaleString()}
+Spend Share of Total Procurement: ${supplierCtx.supplierSpendShare}%
+Manually Provided Annual Spend Override: ${form.annualSpend && form.annualSpend !== String(Math.round(supplierCtx.supplierSpend)) ? '$' + parseInt(form.annualSpend).toLocaleString() : 'None'}
+
+=== VENDOR RATINGS (1-100 scale) ===
+Overall: ${supplierCtx.vendorRatingOverall ?? 'Not rated'}
+Delivery: ${supplierCtx.vendorRatingDelivery ?? 'Not rated'}
+Quality: ${supplierCtx.vendorRatingQuality ?? 'Not rated'}
+Cost: ${supplierCtx.vendorRatingCost ?? 'Not rated'}
+
+=== SYSTEM-COMPUTED RISK SCORES ===
+Overall Risk Score: ${supplierCtx.overallRiskScore}/100 (${supplierCtx.riskLevel} Risk)
+  - Delivery Delay Risk: ${supplierCtx.deliveryDelayRiskScore}/30
+  - Lead Time Risk: ${supplierCtx.leadTimeRiskScore}/20
+  - Supplier Dependency Risk: ${supplierCtx.supplierDependencyRiskScore}/20
+  - Cost Concentration Risk: ${supplierCtx.costConcentrationRiskScore}/15
+  - Performance Risk: ${supplierCtx.supplierPerformanceRiskScore}/15
+
+=== DETECTED RISK FLAGS ===
+${supplierCtx.detectedRisks.length > 0
+  ? supplierCtx.detectedRisks.map(r => `[${r.severity.toUpperCase()}] ${r.type}: ${r.message}`).join('\n')
+  : 'No risk flags detected'}
+
+=== ALTERNATIVE SUPPLIERS ===
+Known Alternative Suppliers: ${form.alternativeSuppliers} (0 = sole source dependency)
+
+=== ADDITIONAL CONTEXT ===
+${form.notes || 'No additional notes provided.'}
+
+Based on ALL of the above real procurement data, provide a comprehensive risk assessment
+with specific, data-driven observations. Reference actual numbers from the data above
+(e.g., mention the specific late rate, the spend share percentage, the risk scores).
+Do NOT give generic advice — tailor every factor and mitigation to this vendor's actual data.`
+      : `Analyze procurement risk for:
 Vendor: ${form.vendorName}
 Product Category: ${form.category}
 Annual Spend: $${parseInt(form.annualSpend) || 0}
@@ -440,6 +639,32 @@ Recent Issues: ${form.notes || 'None reported'}`;
     "mitigations": ["string"]
   }
 }`;
+
+    if (demoMode) {
+      await new Promise((r) => setTimeout(r, 1800));
+      const analysis: SavedAnalysis = {
+        id: Math.random().toString(36).substring(2, 11),
+        timestamp: new Date().toISOString(),
+        vendorName: form.vendorName,
+        category: form.category,
+        annualSpend: parseInt(form.annualSpend) || 0,
+        result: DEMO_RESULT,
+        demoMode: true,
+        selectedVendorId,
+      };
+      saveAnalysis(analysis);
+      setHistory(getSavedAnalyses());
+      setResult(DEMO_RESULT);
+      setLoading(false);
+      return;
+    }
+
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      setError('No API key configured. Please add your Anthropic API key in Settings.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -501,6 +726,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
         annualSpend: parseInt(form.annualSpend) || 0,
         result: parsed,
         demoMode: false,
+        selectedVendorId,
       };
       saveAnalysis(analysis);
       setHistory(getSavedAnalyses());
@@ -515,7 +741,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
     } finally {
       setLoading(false);
     }
-  }, [form, demoMode]);
+  }, [form, demoMode, selectedVendorId, supplierCtx]);
 
   function handleRetry() {
     setError(null);
@@ -542,23 +768,6 @@ Recent Issues: ${form.notes || 'None reported'}`;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     setHistory(updated);
   }
-
-  const vendorDropdown = (
-    <div className="relative">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-      <select
-        value=""
-        onChange={(e) => handleVendorSelect(e.target.value)}
-        className="w-full pl-10 pr-10 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2"
-      >
-        <option value="">Load from vendor directory...</option>
-        {vendors.map((v: Vendor) => (
-          <option key={v.id} value={v.id}>{v.name} ({v.category})</option>
-        ))}
-      </select>
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-    </div>
-  );
 
   return (
     <div className="space-y-6">
@@ -635,11 +844,38 @@ Recent Issues: ${form.notes || 'None reported'}`;
 
         {/* Vendor selector */}
         <div className="mb-5">
-          <label className="block text-sm text-slate-400 mb-1.5">Quick Load from Directory</label>
-          {vendorDropdown}
+          <label className="block text-sm text-slate-400 mb-1.5">Load from Vendor Directory</label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <select
+                value={selectedVendorId || ''}
+                onChange={(e) => handleVendorSelect(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2"
+              >
+                <option value="">Select a vendor...</option>
+                {vendors.map((v: Vendor) => (
+                  <option key={v.id} value={v.id}>{v.name} ({v.category})</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+            </div>
+            {selectedVendorId && (
+              <button
+                onClick={clearVendorSelection}
+                className="relative z-2 px-3 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-slate-400 hover:text-white transition-colors"
+                title="Clear selection"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-4">
+        {/* Supplier context preview */}
+        {supplierCtx && <SupplierContextBadge ctx={supplierCtx} />}
+
+        <div className="space-y-4 mt-5">
           {/* Row 1: Vendor Name + Category */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -674,7 +910,12 @@ Recent Issues: ${form.notes || 'None reported'}`;
           {/* Row 2: Spend + Suppliers + Delay */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Annual Spend (USD)</label>
+              <label className="block text-sm text-slate-400 mb-1.5">
+                Annual Spend (USD)
+                {supplierCtx && form.annualSpend !== String(Math.round(supplierCtx.supplierSpend)) && (
+                  <span className="text-blue-400 ml-1 text-xs">(override)</span>
+                )}
+              </label>
               <input
                 type="number"
                 value={form.annualSpend}
@@ -790,6 +1031,11 @@ Recent Issues: ${form.notes || 'None reported'}`;
               style={{ width: `${((loadingMsgIdx + 1) / LOADING_MESSAGES.length) * 100}%` }}
             />
           </div>
+          {supplierCtx && (
+            <p className="text-xs text-slate-500 mt-3">
+              Analyzing live data for <span className="text-blue-400">{supplierCtx.vendorName}</span>
+            </p>
+          )}
         </div>
       )}
 
@@ -831,6 +1077,16 @@ Recent Issues: ${form.notes || 'None reported'}`;
               })}
             </div>
           </div>
+
+          {supplierCtx && (
+            <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl px-5 py-3 flex items-center gap-2">
+              <Info className="w-4 h-4 text-blue-400" />
+              <p className="text-xs text-slate-400">
+                Analysis based on live procurement data for <span className="text-blue-400 font-medium">{supplierCtx.vendorName}</span>
+                {' '}(Overall Risk: {supplierCtx.overallRiskScore}/100, {supplierCtx.riskLevel} Risk)
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <RiskCard title="Supply Chain Risk" data={result.supplyChain} />
