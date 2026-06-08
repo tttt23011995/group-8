@@ -96,6 +96,87 @@ function formatMoney(n: number): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function VendorCombobox({
+  vendors,
+  vendorId,
+  hasError,
+  onChange,
+}: {
+  vendors: Vendor[];
+  vendorId: string;
+  hasError: boolean;
+  onChange: (id: string) => void;
+}) {
+  const selectedVendor = vendors.find((v) => v.id === vendorId) ?? null;
+  const [query, setQuery] = useState(selectedVendor?.name ?? '');
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setQuery(selectedVendor?.name ?? '');
+  }, [vendorId, selectedVendor?.name]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        if (!selectedVendor) setQuery('');
+        else setQuery(selectedVendor.name);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open, selectedVendor]);
+
+  const filtered = vendors.filter((v) =>
+    v.name.toLowerCase().includes(query.toLowerCase())
+  );
+
+  function handleSelect(v: Vendor) {
+    onChange(v.id);
+    setQuery(v.name);
+    setOpen(false);
+  }
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setQuery(e.target.value);
+    setOpen(true);
+    if (!e.target.value) onChange('');
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        type="text"
+        value={query}
+        onChange={handleInputChange}
+        onFocus={() => setOpen(true)}
+        placeholder="Search vendor..."
+        className={`w-full bg-navy-700 border rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 pr-10 ${hasError ? 'border-red-500' : 'border-blue-900/40'}`}
+      />
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-navy-800 border border-blue-900/40 rounded-lg shadow-2xl shadow-black/40 max-h-52 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-4 py-3 text-sm text-slate-500">No vendors found</div>
+          ) : (
+            filtered.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); handleSelect(v); }}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-navy-600 ${v.id === vendorId ? 'text-blue-400 font-medium' : 'text-white'}`}
+              >
+                {v.name}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PurchaseOrders() {
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -608,24 +689,15 @@ export default function PurchaseOrders() {
                   <label className="block text-sm text-slate-400 mb-1.5">
                     Vendor <span className="text-red-400">*</span>
                   </label>
-                  <div className="relative">
-                    <select
-                      value={form.vendorId}
-                      onChange={(e) => {
-                        setForm({ ...form, vendorId: e.target.value });
-                        if (e.target.value) clearError('vendor');
-                      }}
-                      className={`w-full bg-navy-700 border rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10 ${validationErrors.vendor ? 'border-red-500' : 'border-blue-900/40'}`}
-                    >
-                      <option value="">Select vendor...</option>
-                      {vendors.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                  </div>
+                  <VendorCombobox
+                    vendors={vendors}
+                    vendorId={form.vendorId}
+                    hasError={!!validationErrors.vendor}
+                    onChange={(id) => {
+                      setForm({ ...form, vendorId: id });
+                      if (id) clearError('vendor');
+                    }}
+                  />
                   {validationErrors.vendor && <p className="text-red-400 text-xs mt-1">{validationErrors.vendor}</p>}
                 </div>
                 <div>
