@@ -18,6 +18,15 @@ import { useRefresh } from '../lib/RefreshContext';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend);
 
+function isOverdue(po: PurchaseOrder): boolean {
+  if (po.status === 'delivered' || po.status === 'invoiced') return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const deliveryDate = new Date(po.deliveryDate);
+  deliveryDate.setHours(0, 0, 0, 0);
+  return Math.floor((today.getTime() - deliveryDate.getTime()) / 86400000) > 0;
+}
+
 const statusColors: Record<string, string> = {
   Ordered: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
@@ -85,7 +94,7 @@ export default function Dashboard() {
 
   const totalVendors = vendors.length;
   const openPOs = pos.filter((p) => p.status !== 'delivered').length;
-  const overdueDeliveries = pos.filter((p) => p.status === 'overdue').length;
+  const overdueDeliveries = pos.filter(isOverdue).length;
   const avgScore = vendors.length
     ? Math.round(vendors.reduce((sum, v) => sum + v.score, 0) / vendors.length)
     : 0;
