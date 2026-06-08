@@ -44,3 +44,177 @@
     transition: transform 0.3s ease;
   }
 }
+
+/* ── Sidebar: always off-canvas by default, slides in on mobile ─────────── */
+.sidebar {
+  transition: transform 0.3s ease;
+}
+
+/* Overlay: hidden by default using display:none so it never blocks clicks */
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 767px) {
+  /* Sidebar off-canvas */
+  .sidebar {
+    transform: translateX(-220px);
+  }
+
+  /* Main content: no left margin on mobile */
+  .main-content {
+    margin-left: 0 !important;
+    padding-top: 56px;
+  }
+
+  /* Page inner padding */
+  .main-content > div {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* KPI grid: 1-col on mobile */
+  .kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* KPI card padding */
+  .kpi-inner {
+    padding: 14px 14px 14px 18px !important;
+  }
+
+  /* KPI number: fluid size */
+  .kpi-value {
+    font-size: clamp(1.4rem, 4vw, 1.8rem) !important;
+  }
+
+  /* KPI label: allow wrapping on mobile */
+  .kpi-label {
+    font-size: 11px !important;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  /* Chart container: fixed height on mobile */
+  .chart-wrapper {
+    width: 100%;
+    overflow: hidden;
+    height: 200px;
+  }
+
+  /* Chart axis ticks: smaller font on mobile */
+  .chart-wrapper canvas {
+    max-height: 200px;
+  }
+
+  /* All body text minimum 13px */
+  p, span, td, th, li, label {
+    font-size: max(13px, 1em);
+  }
+
+  /* Section headings minimum 15px */
+  h1, h2, h3, h4 {
+    font-size: max(15px, 1em);
+  }
+
+  /* All tappable elements: 44px touch targets */
+  button, a[href], [role="button"] {
+    min-height: 44px;
+    pointer-events: auto;
+    position: relative;
+    z-index: 2;
+  }
+}
+
+/* Sidebar open: slides in, overlay visible */
+html.sidebar-open .sidebar {
+  transform: translateX(0);
+}
+
+html.sidebar-open .mobile-overlay {
+  display: block;
+}
+
+/* ── Print styles ─────────────────────────────────────────────────────── */
+@media print {
+  html, body {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide everything */
+  body[data-printing="po"] * {
+    visibility: hidden;
+  }
+
+  /* Reveal only the PO document and all its descendants */
+  body[data-printing="po"] .po-document,
+  body[data-printing="po"] .po-document * {
+    visibility: visible;
+  }
+
+  /* Position the PO document to fill the printed page */
+  body[data-printing="po"] .po-document {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: white !important;
+    color: #111 !important;
+    padding: 20px !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Table formatting */
+  .po-document table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  .po-document thead {
+    display: table-header-group !important;
+  }
+
+  .po-document th,
+  .po-document td {
+    border: 1px solid #ccc !important;
+    padding: 6pt 8pt !important;
+  }
+
+  .po-document tbody tr {
+    page-break-inside: avoid !important;
+  }
+
+  /* Preserve color for blue header row and grand total row */
+  .po-document thead th,
+  .po-document .bg-blue-600 {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* ── Sub 380px tweaks ───────────────────────────────────────────────────── */
+@media (max-width: 379px) {
+  .kpi-inner {
+    padding: 10px 10px 10px 14px !important;
+  }
+
+  .kpi-label {
+    font-size: 12px !important;
+  }
+
+  /* Shrink sidebar emoji icons slightly */
+  .sidebar nav button span:first-child {
+    font-size: 18px;
+  }
+}

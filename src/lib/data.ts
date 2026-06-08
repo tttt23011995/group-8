@@ -1,14 +1,30 @@
 export interface Vendor {
   id: string;
+  vendorCode: string;
   name: string;
   category: string;
   contact: string;
   email: string;
   phone: string;
+  leadTime: number;
+  paymentTerms: string;
   score: number;
-  status: 'active' | 'inactive' | 'under-review';
+  status: 'active' | 'inactive';
   location: string;
   contractEnd: string;
+}
+
+export interface LineItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
+export interface DeliveryNote {
+  timestamp: string;
+  text: string;
 }
 
 export interface PurchaseOrder {
@@ -18,9 +34,13 @@ export interface PurchaseOrder {
   vendorName: string;
   date: string;
   total: number;
-  status: 'pending' | 'approved' | 'shipped' | 'delivered' | 'invoiced' | 'overdue';
+  status: 'ordered' | 'confirmed' | 'in-transit' | 'delivered' | 'invoiced';
   items: string;
   deliveryDate: string;
+  lineItems?: LineItem[];
+  subtotal?: number;
+  tax?: number;
+  deliveryNotes?: DeliveryNote[];
 }
 
 export interface VendorRating {
@@ -30,11 +50,6 @@ export interface VendorRating {
   cost: number;
   responsiveness: number;
   overall: number;
-}
-
-export interface DeliveryPerformance {
-  onTime: boolean;
-  daysDifference: number;
 }
 
 const VENDOR_KEY = 'vendors';
@@ -47,16 +62,20 @@ function generateId(): string {
 }
 
 export function seedData(): void {
-  if (localStorage.getItem(VENDOR_KEY)) return;
+  const existingVendors = localStorage.getItem(VENDOR_KEY);
+  if (existingVendors && JSON.parse(existingVendors).length >= 12) return;
 
   const vendors: Vendor[] = [
     {
       id: generateId(),
+      vendorCode: 'VND-001',
       name: 'Apex Materials Inc.',
       category: 'Raw Materials',
       contact: 'Sarah Chen',
       email: 's.chen@apexmat.com',
       phone: '+1 (555) 201-3344',
+      leadTime: 14,
+      paymentTerms: 'Net 30',
       score: 87,
       status: 'active',
       location: 'Houston, TX',
@@ -64,11 +83,14 @@ export function seedData(): void {
     },
     {
       id: generateId(),
+      vendorCode: 'VND-002',
       name: 'TechForge Components',
       category: 'Electronics',
       contact: 'Marcus Rivera',
       email: 'm.rivera@techforge.io',
       phone: '+1 (555) 402-8877',
+      leadTime: 7,
+      paymentTerms: 'Net 60',
       score: 92,
       status: 'active',
       location: 'San Jose, CA',
@@ -76,127 +98,609 @@ export function seedData(): void {
     },
     {
       id: generateId(),
-      name: 'GreenPack Solutions',
-      category: 'Packaging',
-      contact: 'Emily Nakamura',
-      email: 'e.nakamura@greenpack.co',
-      phone: '+1 (555) 678-1122',
-      score: 74,
-      status: 'under-review',
-      location: 'Portland, OR',
-      contractEnd: '2026-08-20',
+      vendorCode: 'VND-003',
+      name: 'PetroChem Industries',
+      category: 'Raw Materials',
+      contact: 'Olga Petrov',
+      email: 'o.petrov@petrochem.com',
+      phone: '+1 (555) 310-4499',
+      leadTime: 18,
+      paymentTerms: 'Net 60',
+      score: 71,
+      status: 'active',
+      location: 'Baton Rouge, LA',
+      contractEnd: '2026-09-30',
     },
     {
       id: generateId(),
+      vendorCode: 'VND-004',
       name: 'SteelPeak Logistics',
       category: 'Logistics',
       contact: 'David Okonkwo',
       email: 'd.okonkwo@steelpeak.com',
       phone: '+1 (555) 990-4455',
-      score: 68,
+      leadTime: 3,
+      paymentTerms: 'Net 30',
+      score: 48,
       status: 'active',
       location: 'Chicago, IL',
       contractEnd: '2026-06-30',
     },
     {
       id: generateId(),
+      vendorCode: 'VND-005',
       name: 'NanoChem Labs',
-      category: 'Chemicals',
+      category: 'Raw Materials',
       contact: 'Dr. Lisa Park',
       email: 'l.park@nanochem.org',
       phone: '+1 (555) 335-7766',
-      score: 81,
+      leadTime: 22,
+      paymentTerms: 'Net 90',
+      score: 55,
       status: 'inactive',
       location: 'Raleigh, NC',
-      contractEnd: '2025-12-31',
+      contractEnd: '2026-04-15',
+    },
+    {
+      id: generateId(),
+      vendorCode: 'VND-006',
+      name: 'CircuitPro Ltd',
+      category: 'Electronics',
+      contact: 'Raj Patel',
+      email: 'r.patel@circuitpro.co.uk',
+      phone: '+1 (555) 720-5588',
+      leadTime: 10,
+      paymentTerms: 'Net 30',
+      score: 84,
+      status: 'active',
+      location: 'Austin, TX',
+      contractEnd: '2027-06-30',
+    },
+    {
+      id: generateId(),
+      vendorCode: 'VND-007',
+      name: 'Meridian Freight Co.',
+      category: 'Logistics',
+      contact: 'James Whitfield',
+      email: 'j.whitfield@meridianfreight.com',
+      phone: '+1 (555) 441-2233',
+      leadTime: 4,
+      paymentTerms: 'Net 30',
+      score: 79,
+      status: 'active',
+      location: 'Memphis, TN',
+      contractEnd: '2026-12-31',
+    },
+    {
+      id: generateId(),
+      vendorCode: 'VND-008',
+      name: 'GreenPack Solutions',
+      category: 'Packaging',
+      contact: 'Emily Nakamura',
+      email: 'e.nakamura@greenpack.co',
+      phone: '+1 (555) 678-1122',
+      leadTime: 8,
+      paymentTerms: 'Net 30',
+      score: 74,
+      status: 'active',
+      location: 'Portland, OR',
+      contractEnd: '2026-08-20',
+    },
+    {
+      id: generateId(),
+      vendorCode: 'VND-009',
+      name: 'SilicaSource Group',
+      category: 'Raw Materials',
+      contact: 'Carlos Mendez',
+      email: 'c.mendez@silicasource.com',
+      phone: '+1 (555) 505-6677',
+      leadTime: 30,
+      paymentTerms: 'Net 90',
+      score: 62,
+      status: 'inactive',
+      location: 'Phoenix, AZ',
+      contractEnd: '2026-02-28',
+    },
+    {
+      id: generateId(),
+      vendorCode: 'VND-010',
+      name: 'VoltEdge Systems',
+      category: 'Electronics',
+      contact: 'Anika Desai',
+      email: 'a.desai@voltedge.io',
+      phone: '+1 (555) 815-3344',
+      leadTime: 14,
+      paymentTerms: 'Net 60',
+      score: 96,
+      status: 'active',
+      location: 'Denver, CO',
+      contractEnd: '2027-09-30',
+    },
+    {
+      id: generateId(),
+      vendorCode: 'VND-011',
+      name: 'SwiftRoute Inc.',
+      category: 'Logistics',
+      contact: 'Tom Bergström',
+      email: 't.bergstrom@swiftroute.com',
+      phone: '+1 (555) 223-9900',
+      leadTime: 2,
+      paymentTerms: 'Net 30',
+      score: 88,
+      status: 'active',
+      location: 'Indianapolis, IN',
+      contractEnd: '2027-01-15',
+    },
+    {
+      id: generateId(),
+      vendorCode: 'VND-012',
+      name: 'BoxCraft Industries',
+      category: 'Packaging',
+      contact: 'Mei-Ling Zhao',
+      email: 'm.zhao@boxcraft.com',
+      phone: '+1 (555) 142-7788',
+      leadTime: 21,
+      paymentTerms: 'Net 60',
+      score: 57,
+      status: 'inactive',
+      location: 'Detroit, MI',
+      contractEnd: '2026-03-31',
     },
   ];
 
   const purchaseOrders: PurchaseOrder[] = [
     {
       id: generateId(),
-      poNumber: 'PO-2026-0401',
+      poNumber: 'PO-2025-001',
       vendorId: vendors[0].id,
       vendorName: vendors[0].name,
-      date: '2026-05-28',
-      total: 42500,
-      status: 'approved',
-      items: 'Aluminum sheets x500, Steel rods x200',
-      deliveryDate: '2026-06-15',
+      date: '2026-01-12',
+      total: 33088.0,
+      status: 'invoiced',
+      items: 'Aluminum sheets x400, Copper rods x150, Zinc ingots x80',
+      deliveryDate: '2026-02-05',
+      lineItems: [
+        { id: generateId(), name: 'Aluminum sheets', quantity: 400, unitPrice: 55, lineTotal: 22000 },
+        { id: generateId(), name: 'Copper rods', quantity: 150, unitPrice: 68, lineTotal: 10200 },
+        { id: generateId(), name: 'Zinc ingots', quantity: 80, unitPrice: 9.0, lineTotal: 720 },
+      ],
+      subtotal: 32920.0,
+      tax: 3292.0,
     },
     {
       id: generateId(),
-      poNumber: 'PO-2026-0402',
+      poNumber: 'PO-2025-002',
       vendorId: vendors[1].id,
       vendorName: vendors[1].name,
-      date: '2026-05-30',
-      total: 18900,
-      status: 'shipped',
-      items: 'PCB assemblies x150, Connectors x2000',
-      deliveryDate: '2026-06-10',
+      date: '2026-01-20',
+      total: 21703.0,
+      status: 'invoiced',
+      items: 'PCB assemblies x120, Connectors x2500',
+      deliveryDate: '2026-02-15',
+      lineItems: [
+        { id: generateId(), name: 'PCB assemblies', quantity: 120, unitPrice: 110, lineTotal: 13200 },
+        { id: generateId(), name: 'Connectors', quantity: 2500, unitPrice: 2.2, lineTotal: 5500 },
+      ],
+      subtotal: 18700.0,
+      tax: 1870.0,
     },
     {
       id: generateId(),
-      poNumber: 'PO-2026-0403',
+      poNumber: 'PO-2025-003',
       vendorId: vendors[2].id,
       vendorName: vendors[2].name,
-      date: '2026-05-15',
-      total: 8750,
-      status: 'overdue',
-      items: 'Custom packaging x10000, Labels x5000',
-      deliveryDate: '2026-05-28',
+      date: '2026-01-28',
+      total: 25137.0,
+      status: 'delivered',
+      items: 'Ethanol drums x50, Solvent batches x30',
+      deliveryDate: '2026-03-01',
+      lineItems: [
+        { id: generateId(), name: 'Ethanol drums', quantity: 50, unitPrice: 220, lineTotal: 11000 },
+        { id: generateId(), name: 'Solvent batches', quantity: 30, unitPrice: 340, lineTotal: 10200 },
+      ],
+      subtotal: 21200.0,
+      tax: 2120.0,
     },
     {
       id: generateId(),
-      poNumber: 'PO-2026-0404',
+      poNumber: 'PO-2025-004',
       vendorId: vendors[3].id,
       vendorName: vendors[3].name,
-      date: '2026-06-01',
-      total: 31200,
-      status: 'pending',
-      items: 'Freight service Q3, Warehousing July',
-      deliveryDate: '2026-07-01',
+      date: '2026-02-03',
+      total: 34320.0,
+      status: 'invoiced',
+      items: 'Freight service Q1, Warehousing Feb',
+      deliveryDate: '2026-02-20',
+      lineItems: [
+        { id: generateId(), name: 'Freight service Q1', quantity: 1, unitPrice: 22000, lineTotal: 22000 },
+        { id: generateId(), name: 'Warehousing Feb', quantity: 1, unitPrice: 9200, lineTotal: 9200 },
+      ],
+      subtotal: 31200.0,
+      tax: 3120.0,
     },
     {
       id: generateId(),
-      poNumber: 'PO-2026-0405',
+      poNumber: 'PO-2025-005',
       vendorId: vendors[4].id,
       vendorName: vendors[4].name,
-      date: '2026-04-20',
-      total: 15600,
+      date: '2026-02-10',
+      total: 17160.0,
       status: 'delivered',
-      items: 'Solvent batches x40, Reagent kits x100',
-      deliveryDate: '2026-05-10',
+      items: 'Reagent kits x100, Catalyst packs x60',
+      deliveryDate: '2026-03-15',
+      lineItems: [
+        { id: generateId(), name: 'Reagent kits', quantity: 100, unitPrice: 44, lineTotal: 4400 },
+        { id: generateId(), name: 'Catalyst packs', quantity: 60, unitPrice: 112, lineTotal: 6720 },
+      ],
+      subtotal: 11120.0,
+      tax: 1112.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-006',
+      vendorId: vendors[5].id,
+      vendorName: vendors[5].name,
+      date: '2026-02-18',
+      total: 28270.5,
+      status: 'invoiced',
+      items: 'Resistors x10000, Capacitors x8000, Diodes x5000',
+      deliveryDate: '2026-03-10',
+      lineItems: [
+        { id: generateId(), name: 'Resistors', quantity: 10000, unitPrice: 0.15, lineTotal: 1500 },
+        { id: generateId(), name: 'Capacitors', quantity: 8000, unitPrice: 0.35, lineTotal: 2800 },
+        { id: generateId(), name: 'Diodes', quantity: 5000, unitPrice: 0.48, lineTotal: 2400 },
+      ],
+      subtotal: 6700.0,
+      tax: 670.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-007',
+      vendorId: vendors[6].id,
+      vendorName: vendors[6].name,
+      date: '2026-02-25',
+      total: 16995.0,
+      status: 'delivered',
+      items: 'Express freight x3, Last-mile delivery x150',
+      deliveryDate: '2026-03-12',
+      lineItems: [
+        { id: generateId(), name: 'Express freight', quantity: 3, unitPrice: 4500, lineTotal: 13500 },
+        { id: generateId(), name: 'Last-mile delivery', quantity: 150, unitPrice: 15, lineTotal: 2250 },
+      ],
+      subtotal: 15750.0,
+      tax: 1575.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-008',
+      vendorId: vendors[7].id,
+      vendorName: vendors[7].name,
+      date: '2026-03-05',
+      total: 9625.0,
+      status: 'delivered',
+      items: 'Custom packaging x10000, Labels x5000',
+      deliveryDate: '2026-04-01',
+      lineItems: [
+        { id: generateId(), name: 'Custom packaging', quantity: 10000, unitPrice: 0.65, lineTotal: 6500 },
+        { id: generateId(), name: 'Labels', quantity: 5000, unitPrice: 0.45, lineTotal: 2250 },
+      ],
+      subtotal: 8750.0,
+      tax: 875.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-009',
+      vendorId: vendors[8].id,
+      vendorName: vendors[8].name,
+      date: '2026-03-12',
+      total: 13728.0,
+      status: 'delivered',
+      items: 'Silica sand x200, Feldspar x150, Clay batches x40',
+      deliveryDate: '2026-04-20',
+      lineItems: [
+        { id: generateId(), name: 'Silica sand', quantity: 200, unitPrice: 32, lineTotal: 6400 },
+        { id: generateId(), name: 'Feldspar', quantity: 150, unitPrice: 28, lineTotal: 4200 },
+        { id: generateId(), name: 'Clay batches', quantity: 40, unitPrice: 45, lineTotal: 1800 },
+      ],
+      subtotal: 12400.0,
+      tax: 1240.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-010',
+      vendorId: vendors[9].id,
+      vendorName: vendors[9].name,
+      date: '2026-03-20',
+      total: 46750.0,
+      status: 'confirmed',
+      items: 'Microcontrollers x2000, Sensor modules x500',
+      deliveryDate: '2026-06-20',
+      lineItems: [
+        { id: generateId(), name: 'Microcontrollers', quantity: 2000, unitPrice: 14, lineTotal: 28000 },
+        { id: generateId(), name: 'Sensor modules', quantity: 500, unitPrice: 28, lineTotal: 14000 },
+      ],
+      subtotal: 42000.0,
+      tax: 4200.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-011',
+      vendorId: vendors[10].id,
+      vendorName: vendors[10].name,
+      date: '2026-03-28',
+      total: 22464.0,
+      status: 'in-transit',
+      items: 'Same-day courier x40, Regional freight x2',
+      deliveryDate: '2026-05-28',
+      lineItems: [
+        { id: generateId(), name: 'Same-day courier', quantity: 40, unitPrice: 180, lineTotal: 7200 },
+        { id: generateId(), name: 'Regional freight', quantity: 2, unitPrice: 6600, lineTotal: 13200 },
+      ],
+      subtotal: 20400.0,
+      tax: 2040.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-012',
+      vendorId: vendors[11].id,
+      vendorName: vendors[11].name,
+      date: '2026-04-02',
+      total: 4375.8,
+      status: 'delivered',
+      items: 'Corrugated boxes x5000, Foam inserts x3000',
+      deliveryDate: '2026-04-25',
+      lineItems: [
+        { id: generateId(), name: 'Corrugated boxes', quantity: 5000, unitPrice: 0.6, lineTotal: 3000 },
+        { id: generateId(), name: 'Foam inserts', quantity: 3000, unitPrice: 0.98, lineTotal: 2940 },
+      ],
+      subtotal: 5940.0,
+      tax: 594.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-013',
+      vendorId: vendors[0].id,
+      vendorName: vendors[0].name,
+      date: '2026-04-08',
+      total: 46750.0,
+      status: 'confirmed',
+      items: 'Aluminum sheets x500, Steel rods x200, Titanium plates x50',
+      deliveryDate: '2026-06-18',
+      lineItems: [
+        { id: generateId(), name: 'Aluminum sheets', quantity: 500, unitPrice: 55, lineTotal: 27500 },
+        { id: generateId(), name: 'Steel rods', quantity: 200, unitPrice: 85, lineTotal: 17000 },
+        { id: generateId(), name: 'Titanium plates', quantity: 50, unitPrice: 80, lineTotal: 4000 },
+      ],
+      subtotal: 48500.0,
+      tax: 4850.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-014',
+      vendorId: vendors[1].id,
+      vendorName: vendors[1].name,
+      date: '2026-04-15',
+      total: 20790.0,
+      status: 'in-transit',
+      items: 'PCB assemblies x150, Connectors x2000',
+      deliveryDate: '2026-06-01',
+      lineItems: [
+        { id: generateId(), name: 'PCB assemblies', quantity: 150, unitPrice: 110, lineTotal: 16500 },
+        { id: generateId(), name: 'Connectors', quantity: 2000, unitPrice: 2.2, lineTotal: 4400 },
+      ],
+      subtotal: 20900.0,
+      tax: 2090.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-015',
+      vendorId: vendors[2].id,
+      vendorName: vendors[2].name,
+      date: '2026-04-22',
+      total: 11704.0,
+      status: 'in-transit',
+      items: 'Ethanol drums x20, Solvent batches x15',
+      deliveryDate: '2026-06-25',
+      lineItems: [
+        { id: generateId(), name: 'Ethanol drums', quantity: 20, unitPrice: 220, lineTotal: 4400 },
+        { id: generateId(), name: 'Solvent batches', quantity: 15, unitPrice: 340, lineTotal: 5100 },
+      ],
+      subtotal: 9500.0,
+      tax: 950.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-016',
+      vendorId: vendors[3].id,
+      vendorName: vendors[3].name,
+      date: '2026-04-28',
+      total: 34320.0,
+      status: 'ordered',
+      items: 'Freight service Q3, Warehousing July',
+      deliveryDate: '2026-07-01',
+      lineItems: [
+        { id: generateId(), name: 'Freight service Q3', quantity: 1, unitPrice: 22000, lineTotal: 22000 },
+        { id: generateId(), name: 'Warehousing July', quantity: 1, unitPrice: 9200, lineTotal: 9200 },
+      ],
+      subtotal: 31200.0,
+      tax: 3120.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-017',
+      vendorId: vendors[4].id,
+      vendorName: vendors[4].name,
+      date: '2026-05-02',
+      total: 16926.0,
+      status: 'ordered',
+      items: 'Reagent kits x80, Catalyst packs x100',
+      deliveryDate: '2026-07-10',
+      lineItems: [
+        { id: generateId(), name: 'Reagent kits', quantity: 80, unitPrice: 44, lineTotal: 3520 },
+        { id: generateId(), name: 'Catalyst packs', quantity: 100, unitPrice: 118, lineTotal: 11800 },
+      ],
+      subtotal: 15320.0,
+      tax: 1532.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-018',
+      vendorId: vendors[5].id,
+      vendorName: vendors[5].name,
+      date: '2026-05-08',
+      total: 28270.5,
+      status: 'in-transit',
+      items: 'Resistors x12000, Capacitors x6000, Inductors x3000',
+      deliveryDate: '2026-06-03',
+      lineItems: [
+        { id: generateId(), name: 'Resistors', quantity: 12000, unitPrice: 0.15, lineTotal: 1800 },
+        { id: generateId(), name: 'Capacitors', quantity: 6000, unitPrice: 0.35, lineTotal: 2100 },
+        { id: generateId(), name: 'Inductors', quantity: 3000, unitPrice: 0.72, lineTotal: 2160 },
+      ],
+      subtotal: 6060.0,
+      tax: 606.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-019',
+      vendorId: vendors[0].id,
+      vendorName: vendors[0].name,
+      date: '2026-05-12',
+      total: 28395.0,
+      status: 'ordered',
+      items: 'Aluminum sheets x300, Copper rods x100',
+      deliveryDate: '2026-06-28',
+      lineItems: [
+        { id: generateId(), name: 'Express freight', quantity: 5, unitPrice: 4500, lineTotal: 22500 },
+        { id: generateId(), name: 'Regional freight', quantity: 3, unitPrice: 6600, lineTotal: 19800 },
+      ],
+      subtotal: 42300.0,
+      tax: 4230.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-020',
+      vendorId: vendors[7].id,
+      vendorName: vendors[7].name,
+      date: '2026-05-18',
+      total: 10373.0,
+      status: 'confirmed',
+      items: 'Custom packaging x8000, Shrink wrap x4000',
+      deliveryDate: '2026-06-22',
+      lineItems: [
+        { id: generateId(), name: 'Custom packaging', quantity: 8000, unitPrice: 0.65, lineTotal: 5200 },
+        { id: generateId(), name: 'Shrink wrap', quantity: 4000, unitPrice: 0.42, lineTotal: 1680 },
+      ],
+      subtotal: 6880.0,
+      tax: 688.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-021',
+      vendorId: vendors[8].id,
+      vendorName: vendors[8].name,
+      date: '2026-05-22',
+      total: 13728.0,
+      status: 'ordered',
+      items: 'Silica sand x300, Feldspar x100',
+      deliveryDate: '2026-07-20',
+      lineItems: [
+        { id: generateId(), name: 'Silica sand', quantity: 300, unitPrice: 32, lineTotal: 9600 },
+        { id: generateId(), name: 'Feldspar', quantity: 100, unitPrice: 28, lineTotal: 2800 },
+      ],
+      subtotal: 12400.0,
+      tax: 1240.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-022',
+      vendorId: vendors[9].id,
+      vendorName: vendors[9].name,
+      date: '2026-05-26',
+      total: 62480.0,
+      status: 'confirmed',
+      items: 'Microcontrollers x3000, Sensor modules x800, Power regulators x400',
+      deliveryDate: '2026-06-30',
+      lineItems: [
+        { id: generateId(), name: 'Microcontrollers', quantity: 3000, unitPrice: 14, lineTotal: 42000 },
+        { id: generateId(), name: 'Sensor modules', quantity: 800, unitPrice: 28, lineTotal: 22400 },
+        { id: generateId(), name: 'Power regulators', quantity: 400, unitPrice: 2.5, lineTotal: 1000 },
+      ],
+      subtotal: 65400.0,
+      tax: 6540.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-023',
+      vendorId: vendors[10].id,
+      vendorName: vendors[10].name,
+      date: '2026-05-30',
+      total: 15675.0,
+      status: 'in-transit',
+      items: 'Same-day courier x25, Regional freight x1',
+      deliveryDate: '2026-06-20',
+      lineItems: [
+        { id: generateId(), name: 'Same-day courier', quantity: 25, unitPrice: 180, lineTotal: 4500 },
+        { id: generateId(), name: 'Regional freight', quantity: 1, unitPrice: 9750, lineTotal: 9750 },
+      ],
+      subtotal: 14250.0,
+      tax: 1425.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-024',
+      vendorId: vendors[0].id,
+      vendorName: vendors[0].name,
+      date: '2026-06-01',
+      total: 51480.0,
+      status: 'ordered',
+      items: 'Aluminum sheets x600, Copper rods x250',
+      deliveryDate: '2026-07-15',
+      lineItems: [
+        { id: generateId(), name: 'Aluminum sheets', quantity: 600, unitPrice: 55, lineTotal: 33000 },
+        { id: generateId(), name: 'Copper rods', quantity: 250, unitPrice: 68, lineTotal: 17000 },
+      ],
+      subtotal: 50000.0,
+      tax: 5000.0,
+    },
+    {
+      id: generateId(),
+      poNumber: 'PO-2025-025',
+      vendorId: vendors[0].id,
+      vendorName: vendors[0].name,
+      date: '2026-06-03',
+      total: 11858.0,
+      status: 'ordered',
+      items: 'Aluminum sheets x100, Zinc ingots x300',
+      deliveryDate: '2026-07-08',
+      lineItems: [
+        { id: generateId(), name: 'Corrugated boxes', quantity: 8000, unitPrice: 0.6, lineTotal: 4800 },
+        { id: generateId(), name: 'Foam inserts', quantity: 5000, unitPrice: 0.98, lineTotal: 4900 },
+        { id: generateId(), name: 'Packing tape', quantity: 2000, unitPrice: 0.55, lineTotal: 1100 },
+      ],
+      subtotal: 10800.0,
+      tax: 1080.0,
     },
   ];
 
-  const vendorRatings: VendorRating[] = vendors.map((v) => ({
-    vendorId: v.id,
-    quality: Math.round(v.score * (0.9 + Math.random() * 0.2)),
-    delivery: Math.round(v.score * (0.85 + Math.random() * 0.3)),
-    cost: Math.round(v.score * (0.9 + Math.random() * 0.15)),
-    responsiveness: Math.round(v.score * (0.8 + Math.random() * 0.35)),
-    overall: v.score,
-  }));
-
-  // Seed delivery performance for delivered/invoiced POs
-  const perfMap: Record<string, DeliveryPerformance> = {};
-  purchaseOrders.forEach((po) => {
-    if (po.status === 'delivered') {
-      const vendorIdx = vendors.findIndex((v) => v.id === po.vendorId);
-      // Only vendors[3] (SteelPeak, score 68) gets a late delivery
-      if (vendorIdx === 3) {
-        perfMap[po.id] = { onTime: false, daysDifference: 2 };
-      } else {
-        perfMap[po.id] = { onTime: true, daysDifference: 0 };
-      }
-    }
-  });
+  const vendorRatings: VendorRating[] = [
+    { vendorId: vendors[0].id, quality: 89, delivery: 85, cost: 82, responsiveness: 90, overall: 87 },
+    { vendorId: vendors[1].id, quality: 94, delivery: 91, cost: 88, responsiveness: 95, overall: 92 },
+    { vendorId: vendors[2].id, quality: 72, delivery: 68, cost: 75, responsiveness: 70, overall: 71 },
+    { vendorId: vendors[3].id, quality: 45, delivery: 42, cost: 52, responsiveness: 50, overall: 47 },
+    { vendorId: vendors[4].id, quality: 58, delivery: 52, cost: 55, responsiveness: 56, overall: 55 },
+    { vendorId: vendors[5].id, quality: 86, delivery: 82, cost: 80, responsiveness: 88, overall: 84 },
+    { vendorId: vendors[6].id, quality: 78, delivery: 80, cost: 76, responsiveness: 82, overall: 79 },
+    { vendorId: vendors[7].id, quality: 90, delivery: 45, cost: 74, responsiveness: 73, overall: 70 },
+    { vendorId: vendors[8].id, quality: 60, delivery: 64, cost: 58, responsiveness: 66, overall: 62 },
+    { vendorId: vendors[9].id, quality: 98, delivery: 94, cost: 95, responsiveness: 97, overall: 96 },
+    { vendorId: vendors[10].id, quality: 90, delivery: 87, cost: 86, responsiveness: 89, overall: 88 },
+    { vendorId: vendors[11].id, quality: 55, delivery: 58, cost: 60, responsiveness: 54, overall: 57 },
+  ];
 
   localStorage.setItem(VENDOR_KEY, JSON.stringify(vendors));
   localStorage.setItem(PO_KEY, JSON.stringify(purchaseOrders));
   localStorage.setItem(RATING_KEY, JSON.stringify(vendorRatings));
-  saveDeliveryPerformance(perfMap);
 }
 
 export function getVendors(): Vendor[] {
@@ -226,15 +730,6 @@ export function saveVendorRatings(ratings: VendorRating[]): void {
   localStorage.setItem(RATING_KEY, JSON.stringify(ratings));
 }
 
-export function getDeliveryPerformance(): Record<string, DeliveryPerformance> {
-  const data = localStorage.getItem(PERF_KEY);
-  return data ? JSON.parse(data) : {};
-}
-
-export function saveDeliveryPerformance(perf: Record<string, DeliveryPerformance>): void {
-  localStorage.setItem(PERF_KEY, JSON.stringify(perf));
-}
-
 export function getMonthlyPOData(): { months: string[]; counts: number[] } {
   const pos = getPurchaseOrders();
   const now = new Date();
@@ -255,12 +750,130 @@ export function getMonthlyPOData(): { months: string[]; counts: number[] } {
   return { months, counts };
 }
 
+export function getChartData(numMonths: number): {
+  months: string[];
+  counts: number[];
+  spends: number[];
+  availableMonths: number;
+} {
+  const pos = getPurchaseOrders();
+  const now = new Date();
+  const months: string[] = [];
+  const counts: number[] = [];
+  const spends: number[] = [];
+
+  // Determine how many months actually have real PO data
+  const poMonthSet = new Set(
+    pos.map((po) => {
+      const d = new Date(po.date);
+      return `${d.getFullYear()}-${d.getMonth()}`;
+    })
+  );
+  const availableMonths = poMonthSet.size;
+
+  for (let i = numMonths - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = d.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+    months.push(label);
+
+    const monthPOs = pos.filter((po) => {
+      const poDate = new Date(po.date);
+      return poDate.getMonth() === d.getMonth() && poDate.getFullYear() === d.getFullYear();
+    });
+
+    const count = monthPOs.length || Math.floor(Math.random() * 12) + 3;
+    const spend = monthPOs.reduce((s, po) => s + po.total, 0) || Math.floor(Math.random() * 80000) + 10000;
+    counts.push(count);
+    spends.push(spend);
+  }
+
+  return { months, counts, spends, availableMonths };
+}
+
+export function generateVendorCode(): string {
+  const vendors = getVendors();
+  const maxNum = vendors.reduce((max, v) => {
+    const match = v.vendorCode?.match(/VND-(\d+)/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      return Math.max(max, num);
+    }
+    return max;
+  }, 0);
+  return `VND-${String(maxNum + 1).padStart(3, '0')}`;
+}
+
 export function getOpenPOCountForVendor(vendorId: string): number {
   const pos = getPurchaseOrders();
-  return pos.filter(
-    (po) =>
-      po.vendorId === vendorId &&
-      po.status !== 'delivered' &&
-      po.status !== 'invoiced'
-  ).length;
+  return pos.filter((po) => po.vendorId === vendorId && po.status !== 'delivered').length;
 }
+
+export function generatePONumber(): string {
+  const pos = getPurchaseOrders();
+  const maxNum = pos.reduce((max, po) => {
+    const match = po.poNumber?.match(/PO-\d+-(\d+)/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      return Math.max(max, num);
+    }
+    return max;
+  }, 0);
+  return `PO-2025-${String(maxNum + 1).padStart(3, '0')}`;
+}
+
+export interface DeliveryPerformance {
+  onTime: boolean;
+  daysDifference: number;
+}
+
+export function getDeliveryPerformance(): Record<string, DeliveryPerformance> {
+  const data = localStorage.getItem(PERF_KEY);
+  return data ? JSON.parse(data) : {};
+}
+
+export function saveDeliveryPerformance(perf: Record<string, DeliveryPerformance>): void {
+  localStorage.setItem(PERF_KEY, JSON.stringify(perf));
+}
+
+export interface CatalogItem {
+  name: string;
+  unitPrice: number;
+}
+
+export const CATALOG_ITEMS: CatalogItem[] = [
+  { name: 'Aluminum sheets', unitPrice: 55 },
+  { name: 'Copper rods', unitPrice: 68 },
+  { name: 'Steel rods', unitPrice: 85 },
+  { name: 'Zinc ingots', unitPrice: 9 },
+  { name: 'Titanium plates', unitPrice: 80 },
+  { name: 'Ethanol drums', unitPrice: 220 },
+  { name: 'Solvent batches', unitPrice: 340 },
+  { name: 'Reagent kits', unitPrice: 44 },
+  { name: 'Catalyst packs', unitPrice: 118 },
+  { name: 'Silica sand', unitPrice: 32 },
+  { name: 'Feldspar', unitPrice: 28 },
+  { name: 'Clay batches', unitPrice: 45 },
+  { name: 'PCB assemblies', unitPrice: 110 },
+  { name: 'Connectors', unitPrice: 2.2 },
+  { name: 'Resistors', unitPrice: 0.15 },
+  { name: 'Capacitors', unitPrice: 0.35 },
+  { name: 'Diodes', unitPrice: 0.48 },
+  { name: 'Inductors', unitPrice: 0.72 },
+  { name: 'Microcontrollers', unitPrice: 14 },
+  { name: 'Sensor modules', unitPrice: 28 },
+  { name: 'Power regulators', unitPrice: 2.5 },
+  { name: 'Freight service Q1', unitPrice: 22000 },
+  { name: 'Freight service Q3', unitPrice: 22000 },
+  { name: 'Warehousing Feb', unitPrice: 9200 },
+  { name: 'Warehousing July', unitPrice: 9200 },
+  { name: 'Express freight', unitPrice: 4500 },
+  { name: 'Regional freight', unitPrice: 6600 },
+  { name: 'Same-day courier', unitPrice: 180 },
+  { name: 'Last-mile delivery', unitPrice: 15 },
+  { name: 'Custom packaging', unitPrice: 0.65 },
+  { name: 'Labels', unitPrice: 0.45 },
+  { name: 'Shrink wrap', unitPrice: 0.42 },
+  { name: 'Corrugated boxes', unitPrice: 0.6 },
+  { name: 'Foam inserts', unitPrice: 0.98 },
+  { name: 'Packing tape', unitPrice: 0.55 },
+];

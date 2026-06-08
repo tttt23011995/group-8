@@ -1,156 +1,149 @@
-import { useMemo, useState } from 'react';
-import { Radar } from 'react-chartjs-2';
+import { useMemo, useState, useCallback } from 'react';
+import { Chart } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
-  RadialLinearScale,
-  PointElement,
+  CategoryScale,
+  LinearScale,
+  BarElement,
   LineElement,
-  Filler,
+  PointElement,
+  ArcElement,
+  Title,
   Tooltip,
   Legend,
+  Filler,
 } from 'chart.js';
 import {
-  BarChart3,
+  ShieldAlert,
+  Users,
   AlertTriangle,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  ChevronRight,
   AlertCircle,
   CheckCircle,
+  Activity,
+  Package,
   X,
 } from 'lucide-react';
 import {
-  getVendors,
-  getVendorRatings,
   getPurchaseOrders,
-  Vendor,
+  getDeliveryPerformance,
+  getVendors,
+  PurchaseOrder,
 } from '../lib/data';
+import {
+  buildSupplierRiskData,
+  SupplierRiskEntry,
+  SupplierRisk,
+  SupplierMetrics,
+} from '../lib/supplierRisk';
 
-ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
-// ── Risk Data Model ──────────────────────────────────────────────────────
+// ── Risk Configuration ────────────────────────────────────────────────────
 
-interface LegacySupplierRiskEntry {
-  vendorId: string;
-  vendorName: string;
-  category: string;
-  overallRiskScore: number;
-  riskLevel: 'Low' | 'Medium' | 'High';
-  dependencyRiskScore: number;
-  costConcentrationRiskScore: number;
-  performanceRiskScore: number;
-  contractRiskScore: number;
-}
-
-function buildSupplierRiskData(): LegacySupplierRiskEntry[] {
-  const vendors = getVendors();
-  const pos = getPurchaseOrders();
-  const ratings = getVendorRatings();
-
-  return vendors.map((v) => {
-    const r = ratings.find((rt) => rt.vendorId === v.id);
-    const vendorPOs = pos.filter((p) => p.vendorId === v.id);
-    const totalSpend = vendorPOs.reduce((s, p) => s + p.total, 0);
-    const allSpend = pos.reduce((s, p) => s + p.total, 0);
-    const spendShare = allSpend > 0 ? totalSpend / allSpend : 0;
-
-    // Dependency risk: more alternative vendors in same category = lower risk
-    const sameCategory = vendors.filter(
-      (vr) => vr.category === v.category && vr.id !== v.id && vr.status === 'active'
-    ).length;
-    const dependencyRiskScore = sameCategory >= 3 ? 2 : sameCategory >= 2 ? 6 : sameCategory >= 1 ? 10 : 15;
-
-    // Cost concentration risk: higher spend share = higher risk
-    const costConcentrationRiskScore = Math.min(15, Math.round(spendShare * 50));
-
-    // Performance risk: based on score and delivery
-    let performanceRiskScore = 0;
-    if (v.score < 60) performanceRiskScore += 20;
-    else if (v.score < 70) performanceRiskScore += 15;
-    else if (v.score < 80) performanceRiskScore += 8;
-    else if (v.score < 90) performanceRiskScore += 3;
-
-    if (r && r.delivery < 70) performanceRiskScore += 15;
-    else if (r && r.delivery < 80) performanceRiskScore += 8;
-
-    if (r && r.quality < 70) performanceRiskScore += 15;
-    else if (r && r.quality < 80) performanceRiskScore += 8;
-    performanceRiskScore = Math.min(35, performanceRiskScore);
-
-    // Contract risk
-    let contractRiskScore = 0;
-    const contractEnd = new Date(v.contractEnd);
-    const daysLeft = Math.ceil((contractEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    if (daysLeft < 0) contractRiskScore += 15;
-    else if (daysLeft < 60) contractRiskScore += 12;
-    else if (daysLeft < 180) contractRiskScore += 6;
-    if (v.status === 'inactive') contractRiskScore += 15;
-    else if (v.status === 'under-review') contractRiskScore += 8;
-    contractRiskScore = Math.min(35, contractRiskScore);
-
-    const overallRiskScore = dependencyRiskScore + costConcentrationRiskScore + performanceRiskScore + contractRiskScore;
-
-    let riskLevel: LegacySupplierRiskEntry['riskLevel'];
-    if (overallRiskScore >= 40) riskLevel = 'High';
-    else if (overallRiskScore >= 20) riskLevel = 'Medium';
-    else riskLevel = 'Low';
-
-    return {
-      vendorId: v.id,
-      vendorName: v.name,
-      category: v.category,
-      overallRiskScore,
-      riskLevel,
-      dependencyRiskScore,
-      costConcentrationRiskScore,
-      performanceRiskScore,
-      contractRiskScore,
-    };
-  });
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────
-
-function scoreColor(score: number): { text: string; bg: string; bar: string } {
-  if (score >= 85) return { text: 'text-emerald-400', bg: 'bg-emerald-500', bar: 'bg-emerald-500/30' };
-  if (score >= 70) return { text: 'text-yellow-400', bg: 'bg-yellow-500', bar: 'bg-yellow-500/30' };
-  return { text: 'text-red-400', bg: 'bg-red-500', bar: 'bg-red-500/30' };
-}
-
-function riskLevelConfig(level: LegacySupplierRiskEntry['riskLevel']) {
+function riskConfig(level: 'Low' | 'Medium' | 'High') {
   switch (level) {
     case 'High':
-      return { icon: AlertTriangle, color: 'text-red-400', badge: 'bg-red-500/20 text-red-400 border-red-500/30', bg: 'bg-red-500/10 border-red-500/20' };
+      return {
+        badge: 'bg-red-500/20 text-red-400 border-red-500/30',
+        bar: 'bg-red-500',
+        text: 'text-red-400',
+        bg: 'bg-red-500/10 border-red-500/25',
+        icon: AlertTriangle,
+      };
     case 'Medium':
-      return { icon: AlertCircle, color: 'text-yellow-400', badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', bg: 'bg-yellow-500/10 border-yellow-500/20' };
+      return {
+        badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+        bar: 'bg-amber-500',
+        text: 'text-amber-400',
+        bg: 'bg-amber-500/10 border-amber-500/25',
+        icon: TrendingDown,
+      };
     case 'Low':
-      return { icon: CheckCircle, color: 'text-emerald-400', badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', bg: 'bg-emerald-500/10 border-emerald-500/20' };
+      return {
+        badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+        bar: 'bg-emerald-500',
+        text: 'text-emerald-400',
+        bg: 'bg-emerald-500/10 border-emerald-500/25',
+        icon: TrendingUp,
+      };
   }
 }
 
-// ── Risk Distribution Chart ──────────────────────────────────────────────
+// ── KPI Data ──────────────────────────────────────────────────────────────
 
-function RiskDistributionChart({ data }: { data: LegacySupplierRiskEntry[] }) {
-  const counts = useMemo(() => {
-    const c = { low: 0, medium: 0, high: 0 };
-    data.forEach(({ riskLevel }) => {
-      if (riskLevel === 'Low') c.low++;
-      else if (riskLevel === 'Medium') c.medium++;
-      else c.high++;
-    });
-    return c;
-  }, [data]);
+interface KPIData {
+  totalVendors: number;
+  highRiskVendors: number;
+  lateDeliveryRate: number;
+  avgRiskScore: number;
+}
+
+function computeKPIData(riskData: SupplierRiskEntry[], pos: PurchaseOrder[]): KPIData {
+  const totalVendors = riskData.length;
+  const highRiskVendors = riskData.filter(r => r.risk.overallRiskScore >= 70).length;
+
+  const delivered = pos.filter(p => p.status === 'delivered' || p.status === 'invoiced');
+  const perfMap = getDeliveryPerformance();
+  let lateCount = 0;
+  delivered.forEach(po => {
+    const perf = perfMap[po.id];
+    if (perf && !perf.onTime) lateCount++;
+  });
+  const lateDeliveryRate = delivered.length > 0 ? Math.round((lateCount / delivered.length) * 100) : 0;
+
+  const avgRiskScore = riskData.length > 0
+    ? Math.round(riskData.reduce((s, r) => s + r.risk.overallRiskScore, 0) / riskData.length)
+    : 0;
+
+  return { totalVendors, highRiskVendors, lateDeliveryRate, avgRiskScore };
+}
+
+// ── Components ────────────────────────────────────────────────────────────
+
+function KPICards({ data }: { data: KPIData }) {
+  const kpis = [
+    { label: 'Total Vendors', value: data.totalVendors, icon: Users, color: '#3b82f6' },
+    { label: 'High Risk Vendors', value: data.highRiskVendors, icon: AlertTriangle, color: '#ef4444' },
+    { label: 'Late Delivery Rate', value: `${data.lateDeliveryRate}%`, icon: Clock, color: '#f97316' },
+    { label: 'Avg Risk Score', value: `${data.avgRiskScore}/100`, icon: ShieldAlert, color: '#8b5cf6' },
+  ];
 
   return (
-    <div className="grid grid-cols-3 gap-3">
-      {(['Low', 'Medium', 'High'] as const).map((level) => {
-        const cfg = riskLevelConfig(level);
-        const Icon = cfg.icon;
-        const count = level === 'Low' ? counts.low : level === 'Medium' ? counts.medium : counts.high;
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {kpis.map((kpi) => {
+        const Icon = kpi.icon;
         return (
-          <div key={level} className={`relative z-1 rounded-xl border p-4 ${cfg.bg}`}>
-            <div className="flex items-center gap-2 mb-2">
-              <Icon className={`w-4 h-4 ${cfg.color}`} />
-              <span className={`text-xs font-semibold ${cfg.color}`}>{level} Risk</span>
+          <div
+            key={kpi.label}
+            className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:shadow-blue-900/20"
+            style={{ borderLeft: '4px solid', borderLeftColor: kpi.color }}
+          >
+            <div className="p-4 sm:p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-slate-400 font-medium">{kpi.label}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white mt-1">{kpi.value}</p>
+                </div>
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-white/5 flex items-center justify-center">
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
+                </div>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-white">{count}</p>
           </div>
         );
       })}
@@ -158,342 +151,494 @@ function RiskDistributionChart({ data }: { data: LegacySupplierRiskEntry[] }) {
   );
 }
 
-// ── Vendor Detail Panel ──────────────────────────────────────────────────
+function RiskDistributionChart({ data }: { data: SupplierRiskEntry[] }) {
+  const counts = { low: 0, medium: 0, high: 0 };
+  data.forEach(({ risk }) => {
+    if (risk.overallRiskScore < 40) counts.low++;
+    else if (risk.overallRiskScore < 70) counts.medium++;
+    else counts.high++;
+  });
 
-function VendorDetailPanel({
-  vendor,
-  risk,
-  onClose,
-}: {
-  vendor: Vendor;
-  risk: LegacySupplierRiskEntry;
-  onClose: () => void;
-}) {
-  const ratings = useMemo(() => getVendorRatings(), []);
-  const r = ratings.find((rt) => rt.vendorId === vendor.id);
-  const c = scoreColor(vendor.score);
-
-  const riskBreakdown = [
-    { label: 'Dependency', score: risk.dependencyRiskScore, max: 15 },
-    { label: 'Cost Concentration', score: risk.costConcentrationRiskScore, max: 15 },
-    { label: 'Performance', score: risk.performanceRiskScore, max: 35 },
-    { label: 'Contract', score: risk.contractRiskScore, max: 35 },
-  ];
-
-  const radarData = {
-    labels: ['Quality', 'Delivery', 'Cost', 'Responsiveness'],
-    datasets: [
-      {
-        label: vendor.name,
-        data: r
-          ? [r.quality, r.delivery, r.cost, r.responsiveness]
-          : [vendor.score, vendor.score, vendor.score, vendor.score],
-        backgroundColor: 'rgba(59, 130, 246, 0.15)',
-        borderColor: 'rgba(59, 130, 246, 0.8)',
-        borderWidth: 2,
-        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-        pointRadius: 3,
-      },
-    ],
+  const chartData = {
+    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+    datasets: [{
+      data: [counts.low, counts.medium, counts.high],
+      backgroundColor: ['rgba(34, 197, 94, 0.8)', 'rgba(251, 146, 60, 0.8)', 'rgba(239, 68, 68, 0.8)'],
+      borderColor: ['rgba(34, 197, 94, 1)', 'rgba(251, 146, 60, 1)', 'rgba(239, 68, 68, 1)'],
+      borderWidth: 2,
+    }]
   };
 
-  const radarOptions = {
+  const options = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      r: {
-        beginAtZero: true,
-        max: 100,
-        ticks: { stepSize: 20, color: '#64748b', backdropColor: 'transparent' },
-        grid: { color: 'rgba(30, 58, 95, 0.5)' },
-        pointLabels: { color: '#94a3b8', font: { size: 11 } },
-        angleLines: { color: 'rgba(30, 58, 95, 0.5)' },
+    plugins: {
+      legend: {
+        position: 'right' as const,
+        labels: { color: '#94a3b8', font: { size: 11 }, usePointStyle: true, padding: 16 }
       },
-    },
+      tooltip: {
+        backgroundColor: '#0f2244',
+        callbacks: {
+          label: (ctx: { label: string; raw: number }) => ` ${ctx.label}: ${ctx.raw} vendors`
+        }
+      }
+    }
   };
 
+  const total = counts.low + counts.medium + counts.high;
+
   return (
-    <div className="fixed inset-0 z-[200]" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div
-        className="absolute right-0 top-0 h-full w-[400px] bg-navy-800 border-l border-blue-900/40 shadow-2xl overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="sticky top-0 bg-navy-800 px-5 py-4 border-b border-blue-900/40 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white truncate pr-4">{vendor.name}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors flex-shrink-0">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-6">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-blue-400">{vendor.category}</span>
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${riskLevelConfig(risk.riskLevel).badge}`}>
-              {risk.riskLevel} Risk
-            </span>
+    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
+      <h3 className="text-sm font-bold text-white mb-4">Risk Distribution</h3>
+      <div className="h-[200px]">
+        {total > 0 ? (
+          <Chart type="pie" data={chartData} options={options as never} />
+        ) : (
+          <div className="h-full flex items-center justify-center text-slate-500 text-sm">
+            No vendor data available
           </div>
-
-          <div className="h-44">
-            <Radar data={radarData} options={radarOptions} />
-          </div>
-
-          <div className="text-center">
-            <p className={`text-3xl font-bold ${c.text}`}>{vendor.score}</p>
-            <p className="text-xs text-slate-500">Overall Score</p>
-          </div>
-
-          <div>
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Risk Score Breakdown</h3>
-            <div className="space-y-3">
-              {riskBreakdown.map((item) => {
-                const pct = Math.round((item.score / item.max) * 100);
-                const riskColor = pct >= 70 ? 'text-red-400' : pct >= 40 ? 'text-yellow-400' : 'text-emerald-400';
-                const riskBarColor = pct >= 70 ? 'bg-red-500' : pct >= 40 ? 'bg-yellow-500' : 'bg-emerald-500';
-                const riskBarBg = pct >= 70 ? 'bg-red-500/30' : pct >= 40 ? 'bg-yellow-500/30' : 'bg-emerald-500/30';
-                return (
-                  <div key={item.label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-slate-400">{item.label}</span>
-                      <span className={`text-sm font-semibold ${riskColor}`}>{item.score}/{item.max}</span>
-                    </div>
-                    <div className={`w-full h-1.5 rounded-full ${riskBarBg}`}>
-                      <div
-                        className={`h-full ${riskBarColor} rounded-full transition-all duration-500`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex items-center justify-between mt-4 pt-3 border-t border-blue-900/30">
-              <span className="text-sm text-white font-semibold">Total Risk Score</span>
-              <span className={`text-lg font-bold ${riskLevelConfig(risk.riskLevel).color}`}>
-                {risk.overallRiskScore}/100
-              </span>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ── KPI Data ─────────────────────────────────────────────────────────────
-
-function computeKPIData(riskData: LegacySupplierRiskEntry[]) {
-  const totalVendors = riskData.length;
-  const highRiskVendors = riskData.filter((r) => r.riskLevel === 'High').length;
-  const avgRiskScore = totalVendors
-    ? Math.round(riskData.reduce((s, r) => s + r.overallRiskScore, 0) / totalVendors)
-    : 0;
-
-  return { totalVendors, highRiskVendors, avgRiskScore };
+function getMainRiskCategory(risk: SupplierRisk): string {
+  const scores = [
+    { label: 'Delivery Delay', score: risk.deliveryDelayRiskScore },
+    { label: 'Lead Time', score: risk.leadTimeRiskScore },
+    { label: 'Dependency', score: risk.supplierDependencyRiskScore },
+    { label: 'Performance', score: risk.supplierPerformanceRiskScore },
+  ];
+  const max = scores.reduce((a, b) => a.score > b.score ? a : b);
+  return max.score > 0 ? max.label : 'None';
 }
 
-// ── Main Component ───────────────────────────────────────────────────────
-
-export default function Scorecard() {
-  const vendors = useMemo(() => getVendors(), []);
-  const ratings = useMemo(() => getVendorRatings(), []);
-  const riskData = useMemo(() => buildSupplierRiskData(), []);
-
-  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
-  const [riskFilter, setRiskFilter] = useState<string>('all');
-
-  const enriched = useMemo(
-    () =>
-      vendors.map((v) => {
-        const r = ratings.find((rt) => rt.vendorId === v.id);
-        return {
-          ...v,
-          rating: r || { quality: v.score, delivery: v.score, cost: v.score, responsiveness: v.score, overall: v.score },
-        };
-      }),
-    [vendors, ratings]
-  );
-
-  const kpi = useMemo(() => computeKPIData(riskData), [riskData]);
-
-  const filtered = useMemo(() => {
-    if (riskFilter === 'all') return enriched;
-    const risk = riskData.filter((r) => r.riskLevel === riskFilter);
-    const riskIds = new Set(risk.map((r) => r.vendorId));
-    return enriched.filter((v) => riskIds.has(v.id));
-  }, [enriched, riskData, riskFilter]);
-
-  const selectedVendor = selectedVendorId
-    ? vendors.find((v) => v.id === selectedVendorId)
-    : null;
-  const selectedRisk = selectedVendorId
-    ? riskData.find((r) => r.vendorId === selectedVendorId)
-    : null;
+function VendorRankingTable({
+  data,
+  selectedVendorId,
+  onSelect
+}: {
+  data: SupplierRiskEntry[];
+  selectedVendorId: string | null;
+  onSelect: (vendorId: string) => void;
+}) {
+  // Sort by risk score descending
+  const sorted = [...data].sort((a, b) => b.risk.overallRiskScore - a.risk.overallRiskScore);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <BarChart3 className="w-7 h-7 text-blue-400" />
-          Vendor Scorecard
-        </h1>
-        <p className="text-slate-400 text-sm mt-1">Performance metrics across quality, delivery, cost, and responsiveness</p>
+    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-blue-900/40">
+        <h3 className="text-sm font-bold text-white">Vendor Risk Ranking</h3>
+        <p className="text-xs text-slate-500 mt-0.5">Click to view vendor details</p>
       </div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4">
-          <p className="text-xs text-slate-400">Total Vendors</p>
-          <p className="text-2xl font-bold text-white mt-1">{kpi.totalVendors}</p>
-        </div>
-        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4">
-          <p className="text-xs text-slate-400">High Risk Vendors</p>
-          <p className="text-2xl font-bold text-red-400 mt-1">{kpi.highRiskVendors}</p>
-        </div>
-        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4">
-          <p className="text-xs text-slate-400">Avg Risk Score</p>
-          <p className="text-2xl font-bold text-white mt-1">{kpi.avgRiskScore}<span className="text-lg text-slate-500">/100</span></p>
-        </div>
-        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4">
-          <p className="text-xs text-slate-400">Risk Distribution</p>
-          <RiskDistributionChart data={riskData} />
-        </div>
+      {/* Desktop */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 z-10 bg-navy-800 border-b border-blue-900/30">
+            <tr>
+              <th className="px-4 py-3 text-left text-slate-500 font-medium">Vendor</th>
+              <th className="px-4 py-3 text-center text-slate-500 font-medium">Risk Score</th>
+              <th className="px-4 py-3 text-center text-slate-500 font-medium">Risk Level</th>
+              <th className="px-4 py-3 text-left text-slate-500 font-medium">Main Risk Category</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map(({ metrics, risk }) => {
+              const cfg = riskConfig(risk.riskLevel);
+              const isSelected = selectedVendorId === risk.vendorId;
+              return (
+                <tr
+                  key={risk.vendorId}
+                  onClick={() => onSelect(risk.vendorId)}
+                  className={`border-b border-blue-900/20 cursor-pointer transition-colors ${
+                    isSelected ? 'bg-blue-600/20' : 'hover:bg-white/[0.02]'
+                  }`}
+                >
+                  <td className="px-4 py-3">
+                    <span className="text-white font-medium">{metrics.vendorName}</span>
+                    <p className="text-xs text-slate-500">{metrics.vendor.category}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <span className={`text-lg font-bold ${cfg.text}`}>{risk.overallRiskScore}</span>
+                      <span className="text-xs text-slate-600">/100</span>
+                      <div className="w-16 h-1.5 bg-navy-700 rounded-full overflow-hidden">
+                        <div className={`h-full ${cfg.bar} rounded-full`} style={{ width: `${risk.overallRiskScore}%` }} />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.badge}`}>
+                      {risk.riskLevel}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs text-slate-400">{getMainRiskCategory(risk)}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
-      {/* Risk Filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {['all', 'Low', 'Medium', 'High'].map((f) => (
-          <button
-            key={f}
-            onClick={() => setRiskFilter(f)}
-            className={`relative z-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              riskFilter === f
-                ? 'bg-blue-600 text-white'
-                : 'bg-navy-700 text-slate-400 hover:text-white border border-blue-900/40'
-            }`}
-          >
-            {f === 'all' ? 'All Vendors' : `${f} Risk`}
-          </button>
-        ))}
-      </div>
-
-      {/* Vendor Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filtered.map((v) => {
-          const r = v.rating;
-          const risk = riskData.find((rd) => rd.vendorId === v.id);
-          const metrics = [
-            { label: 'Quality', value: r.quality },
-            { label: 'Delivery', value: r.delivery },
-            { label: 'Cost', value: r.cost },
-            { label: 'Responsiveness', value: r.responsiveness },
-          ];
-          const c = scoreColor(v.score);
-          const riskCfg = risk ? riskLevelConfig(risk.riskLevel) : null;
-
-          const radarData = {
-            labels: ['Quality', 'Delivery', 'Cost', 'Responsiveness'],
-            datasets: [
-              {
-                label: v.name,
-                data: [r.quality, r.delivery, r.cost, r.responsiveness],
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                borderColor: 'rgba(59, 130, 246, 0.8)',
-                borderWidth: 2,
-                pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-                pointRadius: 3,
-              },
-            ],
-          };
-
-          const radarOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              r: {
-                beginAtZero: true,
-                max: 100,
-                ticks: { stepSize: 20, color: '#64748b', backdropColor: 'transparent' },
-                grid: { color: 'rgba(30, 58, 95, 0.5)' },
-                pointLabels: { color: '#94a3b8', font: { size: 11 } },
-                angleLines: { color: 'rgba(30, 58, 95, 0.5)' },
-              },
-            },
-          };
-
+      {/* Mobile */}
+      <div className="block md:hidden divide-y divide-blue-900/20">
+        {sorted.map(({ metrics, risk }) => {
+          const cfg = riskConfig(risk.riskLevel);
+          const isSelected = selectedVendorId === risk.vendorId;
           return (
             <div
-              key={v.id}
-              className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-6 transition-shadow duration-300 hover:shadow-lg hover:shadow-blue-900/20 cursor-pointer"
-              onClick={() => setSelectedVendorId(v.id)}
+              key={risk.vendorId}
+              onClick={() => onSelect(risk.vendorId)}
+              className={`px-4 py-4 cursor-pointer ${isSelected ? 'bg-blue-600/20' : 'hover:bg-white/[0.02]'}`}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-white font-semibold text-lg">{v.name}</h3>
-                  <p className="text-xs text-blue-400 mt-0.5">{v.category}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  {riskCfg && risk && (
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${riskCfg.badge}`}>
-                      {risk.riskLevel} Risk
-                    </span>
-                  )}
-                  <div className="text-right">
-                    <p className={`text-3xl font-bold ${c.text}`}>{v.score}</p>
-                    <p className="text-xs text-slate-500">Overall Score</p>
-                  </div>
+              <div className="flex items-center justify-between">
+                <span className="text-white font-medium text-sm">{metrics.vendorName}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-lg font-bold ${cfg.text}`}>{risk.overallRiskScore}</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${cfg.badge}`}>
+                    {risk.riskLevel}
+                  </span>
                 </div>
               </div>
-
-              <div className="h-44 mb-4">
-                {typeof ChartJS !== 'undefined' ? (
-                  <Radar data={radarData} options={radarOptions} />
-                ) : (
-                  <div className="space-y-2">
-                    {metrics.map((m) => (
-                      <div key={m.label} className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400 w-28">{m.label}</span>
-                        <div className="flex-1 h-2 bg-navy-700 rounded-full overflow-hidden">
-                          <div className={`h-full ${c.bg} rounded-full`} style={{ width: `${m.value}%` }} />
-                        </div>
-                        <span className="text-xs text-slate-300 w-8">{m.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-4 gap-2">
-                {metrics.map((m) => {
-                  const mc = scoreColor(m.value);
-                  return (
-                    <div key={m.label} className="text-center">
-                      <div className={`w-full h-1.5 rounded-full ${mc.bar} mb-1.5`}>
-                        <div
-                          className={`h-full ${mc.bg} rounded-full transition-all duration-500`}
-                          style={{ width: `${m.value}%` }}
-                        />
-                      </div>
-                      <p className={`text-sm font-bold ${mc.text}`}>{m.value}</p>
-                      <p className="text-[10px] text-slate-500">{m.label}</p>
-                    </div>
-                  );
-                })}
-              </div>
+              <p className="text-xs text-slate-500 mt-1">{getMainRiskCategory(risk)}</p>
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
 
-      {/* Vendor Detail Panel */}
-      {selectedVendor && selectedRisk && (
-        <VendorDetailPanel
-          vendor={selectedVendor}
-          risk={selectedRisk}
-          onClose={() => setSelectedVendorId(null)}
+function DeliveryTrendChart({ pos }: { pos: PurchaseOrder[] }) {
+  const perfMap = getDeliveryPerformance();
+
+  const monthlyData: Record<string, { total: number; onTime: number }> = {};
+  pos.filter(p => p.status === 'delivered' || p.status === 'invoiced').forEach(po => {
+    const month = new Date(po.date).toLocaleString('en-US', { month: 'short', year: '2-digit' });
+    if (!monthlyData[month]) monthlyData[month] = { total: 0, onTime: 0 };
+    monthlyData[month].total++;
+    const perf = perfMap[po.id];
+    if (!perf || perf.onTime) monthlyData[month].onTime++;
+  });
+
+  const months = Object.keys(monthlyData).slice(-6);
+  const rates = months.map(m => {
+    const d = monthlyData[m];
+    return d.total > 0 ? Math.round((d.onTime / d.total) * 100) : 100;
+  });
+
+  const chartData = {
+    labels: months,
+    datasets: [{
+      label: 'On-Time Delivery %',
+      data: rates,
+      borderColor: 'rgba(59, 130, 246, 1)',
+      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 4,
+      pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+    }]
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0f2244',
+        callbacks: {
+          label: (ctx: { parsed: { y: number } }) => ` ${ctx.parsed.y}% on-time`
+        }
+      }
+    },
+    scales: {
+      x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(30, 58, 95, 0.5)' } },
+      y: {
+        min: 0,
+        max: 100,
+        ticks: { color: '#64748b', callback: (v: number | string) => `${v}%` },
+        grid: { color: 'rgba(30, 58, 95, 0.5)' }
+      }
+    }
+  };
+
+  return (
+    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
+      <h3 className="text-sm font-bold text-white mb-4">Delivery Performance Trend</h3>
+      <div className="h-[200px]">
+        {months.length > 0 ? (
+          <Chart type="line" data={chartData} options={options as never} />
+        ) : (
+          <div className="h-full flex items-center justify-center text-slate-500 text-sm">
+            No delivery data available
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RiskBreakdownChart({ data }: { data: SupplierRiskEntry[] }) {
+  if (data.length === 0) {
+    return (
+      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
+        <h3 className="text-sm font-bold text-white mb-4">Risk Breakdown</h3>
+        <div className="h-[200px] flex items-center justify-center text-slate-500 text-sm">
+          No data available
+        </div>
+      </div>
+    );
+  }
+
+  const avgDeliveryDelay = data.reduce((s, r) => s + r.risk.deliveryDelayRiskScore, 0) / data.length;
+  const avgLeadTime = data.reduce((s, r) => s + r.risk.leadTimeRiskScore, 0) / data.length;
+  const avgDependency = data.reduce((s, r) => s + r.risk.supplierDependencyRiskScore, 0) / data.length;
+  const avgPerformance = data.reduce((s, r) => s + r.risk.supplierPerformanceRiskScore, 0) / data.length;
+
+  const chartData = {
+    labels: ['Delivery Delay', 'Lead Time Variability', 'Dependency Risk', 'Performance Deterioration'],
+    datasets: [{
+      label: 'Avg Score',
+      data: [avgDeliveryDelay, avgLeadTime, avgDependency, avgPerformance],
+      backgroundColor: [
+        'rgba(239, 68, 68, 0.7)',
+        'rgba(249, 115, 22, 0.7)',
+        'rgba(139, 92, 246, 0.7)',
+        'rgba(59, 130, 246, 0.7)',
+      ],
+      borderColor: [
+        'rgba(239, 68, 68, 1)',
+        'rgba(249, 115, 22, 1)',
+        'rgba(139, 92, 246, 1)',
+        'rgba(59, 130, 246, 1)',
+      ],
+      borderWidth: 1.5,
+      borderRadius: 4,
+    }]
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0f2244',
+        callbacks: {
+          label: (ctx: { label: string; parsed: { y: number } }) => ` ${ctx.label}: ${ctx.parsed.y.toFixed(1)} pts`
+        }
+      }
+    },
+    scales: {
+      x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(30, 58, 95, 0.5)' } },
+      y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(30, 58, 95, 0.5)' } }
+    }
+  };
+
+  return (
+    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
+      <h3 className="text-sm font-bold text-white mb-4">Risk Breakdown</h3>
+      <div className="h-[200px]">
+        <Chart type="bar" data={chartData} options={options as never} />
+      </div>
+    </div>
+  );
+}
+
+function VendorDetailPanel({
+  entry,
+  onClose,
+}: {
+  entry: SupplierRiskEntry | null;
+  onClose: () => void;
+}) {
+  if (!entry) {
+    return (
+      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-6 text-center">
+        <ShieldAlert className="w-10 h-10 mx-auto mb-3 text-slate-600" />
+        <p className="text-slate-500 text-sm">Select a vendor to view details</p>
+      </div>
+    );
+  }
+
+  const { metrics, risk } = entry;
+  const cfg = riskConfig(risk.riskLevel);
+  const RiskIcon = cfg.icon;
+
+  return (
+    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl overflow-hidden">
+      {/* Header */}
+      <div className={`${cfg.bg} px-5 py-4 border-b border-current/30`}>
+        <div className="flex items-start justify-between">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-white font-bold text-lg truncate">{metrics.vendorName}</h3>
+            <p className="text-xs text-slate-400 mt-0.5">{metrics.vendor.category}</p>
+          </div>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-4">
+            <div className="flex items-center gap-1">
+              <span className={`text-3xl font-bold ${cfg.text}`}>{risk.overallRiskScore}</span>
+              <span className="text-xs text-slate-600">/100</span>
+            </div>
+            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.badge}`}>
+              <RiskIcon className="w-3 h-3" />
+              {risk.riskLevel} Risk
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Metrics Grid */}
+      <div className="p-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="bg-navy-700/50 rounded-lg p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Status</p>
+          <p className={`text-sm font-semibold ${metrics.vendor.status === 'active' ? 'text-emerald-400' : 'text-slate-400'}`}>
+            {metrics.vendor.status}
+          </p>
+        </div>
+        <div className="bg-navy-700/50 rounded-lg p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Lead Time</p>
+          <p className="text-sm font-semibold text-white">{metrics.vendorLeadTime} days</p>
+        </div>
+        <div className="bg-navy-700/50 rounded-lg p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Total Orders</p>
+          <p className="text-sm font-semibold text-white">{metrics.totalOrders}</p>
+        </div>
+        <div className="bg-navy-700/50 rounded-lg p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Total Spend</p>
+          <p className="text-sm font-semibold text-white">${metrics.supplierSpend.toLocaleString()}</p>
+        </div>
+        <div className="bg-navy-700/50 rounded-lg p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Spend Share</p>
+          <p className="text-sm font-semibold text-white">{metrics.supplierSpendShare}%</p>
+        </div>
+        <div className="bg-navy-700/50 rounded-lg p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide">On-Time Rate</p>
+          <p className={`text-sm font-semibold ${metrics.onTimeDeliveryRate >= 90 ? 'text-emerald-400' : metrics.onTimeDeliveryRate >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
+            {metrics.onTimeDeliveryRate}%
+          </p>
+        </div>
+      </div>
+
+      {/* Detected Risks */}
+      {risk.detectedRiskTypes.length > 0 && (
+        <div className="px-5 pb-4">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-2">Detected Risks</p>
+          <div className="flex flex-wrap gap-1.5">
+            {risk.detectedRiskTypes.map((t) => {
+              const colorMap: Record<string, string> = {
+                'Delivery Delay Risk': 'bg-red-500/15 text-red-400 border-red-500/25',
+                'Lead Time Risk': 'bg-orange-500/15 text-orange-400 border-orange-500/25',
+                'Supplier Dependency Risk': 'bg-violet-500/15 text-violet-400 border-violet-500/25',
+                'Cost Concentration Risk': 'bg-amber-500/15 text-amber-400 border-amber-500/25',
+                'Supplier Performance Risk': 'bg-blue-500/15 text-blue-400 border-blue-500/25',
+              };
+              const cls = colorMap[t] ?? 'bg-slate-500/15 text-slate-400 border-slate-500/25';
+              return (
+                <span key={t} className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold border ${cls}`}>
+                  {t}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Risk Score Breakdown */}
+      <div className="px-5 pb-5 space-y-3">
+        <p className="text-[10px] text-slate-500 uppercase tracking-wide">Risk Score Breakdown</p>
+        {[
+          { label: 'Delivery Delay', score: risk.deliveryDelayRiskScore, max: 30 },
+          { label: 'Lead Time', score: risk.leadTimeRiskScore, max: 20 },
+          { label: 'Dependency', score: risk.supplierDependencyRiskScore, max: 20 },
+          { label: 'Performance', score: risk.supplierPerformanceRiskScore, max: 15 },
+        ].map((rb) => (
+          <div key={rb.label}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-slate-400">{rb.label}</span>
+              <span className="text-xs font-bold text-white">{rb.score}/{rb.max}</span>
+            </div>
+            <div className="w-full h-1.5 bg-navy-700 rounded-full overflow-hidden">
+              <div
+                className={`h-full ${cfg.bar} rounded-full transition-all duration-700`}
+                style={{ width: `${(rb.score / rb.max) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────
+
+export default function Scorecard() {
+  const vendors = useMemo(() => getVendors(), []);
+  const pos = useMemo(() => getPurchaseOrders(), []);
+  const riskData = useMemo(() => buildSupplierRiskData(), []);
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(() => {
+    return riskData.length > 0 ? riskData[0].risk.vendorId : null;
+  });
+
+  const kpiData = useMemo(() => computeKPIData(riskData, pos), [riskData, pos]);
+  const selectedEntry = useMemo(
+    () => riskData.find(d => d.risk.vendorId === selectedVendorId) || null,
+    [riskData, selectedVendorId]
+  );
+
+  const handleSelectVendor = useCallback((vendorId: string) => {
+    setSelectedVendorId(vendorId);
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <ShieldAlert className="w-7 h-7 text-blue-400" />
+          Vendor Risk Scorecard
+        </h1>
+        <p className="text-slate-400 text-sm mt-1">
+          Monitor supplier risk levels and performance metrics
+        </p>
+      </div>
+
+      {/* 1. KPI Cards */}
+      <KPICards data={kpiData} />
+
+      {/* 2. Risk Distribution + Delivery Trend */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <RiskDistributionChart data={riskData} />
+        <DeliveryTrendChart pos={pos} />
+      </div>
+
+      {/* 3. Vendor Ranking + Detail Panel */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <VendorRankingTable
+          data={riskData}
+          selectedVendorId={selectedVendorId}
+          onSelect={handleSelectVendor}
         />
+        <VendorDetailPanel entry={selectedEntry} onClose={() => setSelectedVendorId(null)} />
+      </div>
+
+      {/* 5. Risk Breakdown Chart */}
+      <RiskBreakdownChart data={riskData} />
+
+      {/* Empty state */}
+      {riskData.length === 0 && (
+        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-10 text-center">
+          <Package className="w-12 h-12 mx-auto mb-3 text-slate-600" />
+          <p className="text-slate-500 text-sm">No vendor risk data available yet.</p>
+          <p className="text-slate-600 text-xs mt-2">Add purchase orders to generate risk analytics.</p>
+        </div>
       )}
     </div>
   );
