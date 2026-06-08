@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Truck, LayoutDashboard, Users, FileText, Truck as TruckIcon, BarChart3, ShieldAlert, Menu, Bell, AlertTriangle, Star, Clock } from 'lucide-react';
+import { Truck, LayoutDashboard, Users, FileText, Truck as TruckIcon, BarChart3, ShieldAlert, Menu, Bell, AlertTriangle, Star, Clock, Moon, Sun } from 'lucide-react';
 import { getVendors, getPurchaseOrders } from '../lib/data';
+import { useTheme } from '../lib/ThemeContext';
 
 interface SidebarProps {
   currentPage: string;
@@ -74,6 +75,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [bellOpen, setBellOpen] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const bellRef = useRef<HTMLDivElement>(null);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     buildAlerts().then(setAlerts).catch(() => {});
@@ -117,7 +119,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
     <div ref={bellRef} className="relative">
       <button
         onClick={() => setBellOpen((v) => !v)}
-        className="relative flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+        className="relative flex items-center justify-center w-8 h-8 rounded-lg text-muted hover:text-themed-text hover:bg-surface transition-colors"
         aria-label="Notifications"
         style={{ minHeight: 44, minWidth: 44 }}
       >
@@ -130,18 +132,18 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       </button>
 
       {bellOpen && (
-        <div className="absolute left-0 top-10 w-72 bg-[#0f2244] border border-blue-900/50 rounded-xl shadow-2xl shadow-black/40 z-[300] overflow-hidden">
-          <div className="px-4 py-3 border-b border-blue-900/40">
-            <p className="text-sm font-semibold text-white">Alerts</p>
-            <p className="text-xs text-slate-500 mt-0.5">
+        <div className="absolute left-0 top-10 w-72 glass glass-strong rounded-xl shadow-glass z-[300] overflow-hidden">
+          <div className="px-4 py-3 border-b border-themed-glass-border">
+            <p className="text-sm font-semibold text-themed-text">Alerts</p>
+            <p className="text-xs text-muted mt-0.5">
               {badgeCount} active notification{badgeCount !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="max-h-64 overflow-y-auto">
             {alerts.length === 0 ? (
               <div className="px-4 py-6 text-center">
-                <Bell className="w-8 h-8 mx-auto text-slate-600 mb-2" />
-                <p className="text-sm text-slate-500">No alerts right now</p>
+                <Bell className="w-8 h-8 mx-auto text-muted mb-2" />
+                <p className="text-sm text-muted">No alerts right now</p>
               </div>
             ) : (
               alerts.map((alert) => {
@@ -150,11 +152,11 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                   <button
                     key={alert.id}
                     onClick={() => handleNav(alert.page)}
-                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-blue-900/20 last:border-0 text-left"
+                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-surface transition-colors border-b border-themed-glass-border last:border-0 text-left"
                     style={{ minHeight: 44, position: 'relative', zIndex: 2, pointerEvents: 'auto' }}
                   >
                     <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${alert.iconColor}`} />
-                    <span className="text-xs text-slate-300 leading-snug">{alert.description}</span>
+                    <span className="text-xs text-muted leading-snug">{alert.description}</span>
                   </button>
                 );
               })
@@ -168,10 +170,10 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="mobile-topbar fixed top-0 left-0 right-0 h-14 bg-[#0a1628] z-[200] flex items-center px-4 md:hidden border-b border-blue-900/40">
+      <div className="mobile-topbar fixed top-0 left-0 right-0 h-14 glass glass-strong z-[200] flex items-center px-4 md:hidden">
         <button
           onClick={() => setMobileOpen(true)}
-          className="text-slate-300 hover:text-white transition-colors"
+          className="text-muted hover:text-themed-text transition-colors"
           aria-label="Open navigation"
           style={{ minHeight: 44, minWidth: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 2, pointerEvents: 'auto' }}
         >
@@ -179,7 +181,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         </button>
         <div className="flex items-center gap-2 ml-2">
           <Truck className="w-5 h-5 text-blue-400" />
-          <span className="text-base font-bold text-white tracking-tight">
+          <span className="text-base font-bold text-themed-text tracking-tight">
             <span className="text-blue-400">Procure</span>AI
           </span>
         </div>
@@ -192,12 +194,12 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       />
 
       {/* Sidebar */}
-      <aside className="sidebar fixed left-0 top-0 h-screen w-[220px] bg-[#0a1628] border-r border-blue-900/40 z-[100] flex flex-col">
+      <aside className="sidebar fixed left-0 top-0 h-screen w-[220px] glass glass-strong z-[100] flex flex-col">
         {/* Logo + bell */}
-        <div className="flex items-center justify-between px-5 h-16 border-b border-blue-900/40">
+        <div className="flex items-center justify-between px-5 h-16 border-b border-themed-glass-border">
           <div className="flex items-center gap-2">
             <Truck className="w-7 h-7 text-blue-400" />
-            <span className="text-xl font-bold text-white tracking-tight">
+            <span className="text-xl font-bold text-themed-text tracking-tight">
               <span className="text-blue-400">Procure</span>AI
             </span>
           </div>
@@ -217,8 +219,8 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 style={{ minHeight: 44, position: 'relative', zIndex: 101, pointerEvents: 'auto' }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   active
-                    ? 'bg-blue-600/10 text-blue-400 border-l-[3px] border-[#3b82f6] -ml-[3px] pl-[18px]'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5 border-l-[3px] border-transparent -ml-[3px] pl-[18px]'
+                    ? 'bg-blue-500/10 text-blue-400 border-l-[3px] border-[var(--accent)] -ml-[3px] pl-[18px]'
+                    : 'text-muted hover:text-themed-text hover:bg-surface border-l-[3px] border-transparent -ml-[3px] pl-[18px]'
                 }`}
               >
                 <span className="text-lg leading-none">{item.emoji}</span>
@@ -229,8 +231,20 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         </nav>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-blue-900/40">
-          <p className="text-xs text-slate-600">ProcureAI v1.0</p>
+        <div className="px-5 py-4 border-t border-themed-glass-border flex items-center justify-between">
+          <p className="text-xs text-muted">ProcureAI v1.0</p>
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center w-9 h-9 rounded-lg bg-surface hover:bg-surface-strong transition-colors"
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-blue-600" />
+            )}
+          </button>
         </div>
       </aside>
     </>
