@@ -5,9 +5,19 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  BarController,
+  LineElement,
+  LineController,
+  PointElement,
+  ArcElement,
+  DoughnutController,
+  PieController,
+  RadarController,
+  RadialLinearScale,
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from 'chart.js';
 import {
   Package,
@@ -37,7 +47,24 @@ import { useRefresh } from '../lib/RefreshContext';
 
 
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  BarController,
+  LineElement,
+  LineController,
+  PointElement,
+  ArcElement,
+  DoughnutController,
+  PieController,
+  RadarController,
+  RadialLinearScale,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+);
 
 const STATUS_ORDER: PurchaseOrder['status'][] = [
   'ordered',

@@ -5,18 +5,43 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  BarController,
   LineElement,
+  LineController,
   PointElement,
+  ArcElement,
+  DoughnutController,
+  PieController,
+  RadarController,
+  RadialLinearScale,
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from 'chart.js';
 import { Users, FileText, AlertTriangle, Star, TrendingUp, TrendingDown } from 'lucide-react';
 import { getVendors, getPurchaseOrders, getChartData, Vendor, PurchaseOrder } from '../lib/data';
 import { useAnimatedCounter } from '../lib/useAnimatedCounter';
 import { useRefresh } from '../lib/RefreshContext';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  BarController,
+  LineElement,
+  LineController,
+  PointElement,
+  ArcElement,
+  DoughnutController,
+  PieController,
+  RadarController,
+  RadialLinearScale,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+);
 
 function isOverdue(po: PurchaseOrder): boolean {
   if (po.status === 'delivered' || po.status === 'invoiced') return false;
