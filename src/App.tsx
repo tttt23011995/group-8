@@ -25,10 +25,10 @@ export default function App() {
 
   return (
     <RefreshContext.Provider value={{ refreshKey, triggerRefresh }}>
-      <div className="min-h-screen bg-navy-900">
+      <div className="min-h-screen bg-theme transition-colors duration-glass">
         <Sidebar currentPage={currentPage} onNavigate={navigate} />
         <main className="main-content md:ml-[220px] transition-[margin] duration-300">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
             {currentPage === 'dashboard' && <Dashboard />}
             {currentPage === 'vendors' && <Vendors />}
             {currentPage === 'purchase-orders' && <PurchaseOrders />}
