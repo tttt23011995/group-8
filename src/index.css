@@ -3,66 +3,17 @@
 @tailwind utilities;
 
 @layer base {
-  /* ── Theme CSS Custom Properties ─────────────────────────────────────────── */
-  :root {
-    /* Shared tokens */
-    --glass-blur: 16px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
-    --ease-glass: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* Dark theme (default) */
-  :root,
-  .dark {
-    --bg: #050a15;
-    --bg-soft: #0a1628;
-    --surface: rgba(15, 34, 68, 0.6);
-    --surface-strong: rgba(15, 34, 68, 0.85);
-    --glass-bg: rgba(15, 34, 68, 0.55);
-    --glass-bg-strong: rgba(15, 34, 68, 0.75);
-    --glass-border: rgba(59, 130, 246, 0.2);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    --text: #ffffff;
-    --muted: #94a3b8;
-    --accent: #3b82f6;
-    --accent-2: #06b6d4;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-  }
-
-  /* Light theme */
-  .light {
-    --bg: #f0f4f8;
-    --bg-soft: #e2e8f0;
-    --surface: rgba(255, 255, 255, 0.7);
-    --surface-strong: rgba(255, 255, 255, 0.9);
-    --glass-bg: rgba(255, 255, 255, 0.6);
-    --glass-bg-strong: rgba(255, 255, 255, 0.85);
-    --glass-border: rgba(59, 130, 246, 0.15);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    --text: #0f172a;
-    --muted: #64748b;
-    --accent: #2563eb;
-    --accent-2: #0891b2;
-    --success: #059669;
-    --warning: #d97706;
-    --danger: #dc2626;
-  }
-
   body {
-    background-color: var(--bg-soft);
-    color: var(--text);
+    background-color: #0a1628;
+    color: #e2e8f0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color 0.3s var(--ease-glass), color 0.3s var(--ease-glass);
   }
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--accent) var(--bg);
+    scrollbar-color: #1e3a5f #0a1628;
   }
 
   *::-webkit-scrollbar {
@@ -71,216 +22,26 @@
   }
 
   *::-webkit-scrollbar-track {
-    background: var(--bg);
+    background: #0a1628;
   }
 
   *::-webkit-scrollbar-thumb {
-    background: var(--accent);
+    background: #1e3a5f;
     border-radius: 3px;
-    opacity: 0.5;
   }
 }
 
 @layer components {
   .card,
-  .kpi-card,
-  .glass {
+  .kpi-card {
     position: relative;
     z-index: 1;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--glass-shadow);
-  }
-
-  .glass-strong {
-    background: var(--glass-bg-strong);
-  }
-
-  /* Semantic theme components */
-  .theme-card {
-    background: var(--glass-bg-strong);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--glass-shadow);
-  }
-
-  .theme-panel {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-  }
-
-  .theme-modal {
-    background: var(--glass-bg-strong);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--glass-shadow);
-  }
-
-  .theme-input {
-    background: var(--surface);
-    border: 1px solid var(--glass-border);
-    color: var(--text);
-    border-radius: var(--radius-lg);
-  }
-
-  .theme-input::placeholder {
-    color: var(--muted);
-  }
-
-  .theme-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-  }
-
-  .theme-select {
-    background: var(--surface);
-    border: 1px solid var(--glass-border);
-    color: var(--text);
-    border-radius: var(--radius-lg);
-  }
-
-  .theme-table {
-    background: var(--glass-bg-strong);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-  }
-
-  .theme-table thead {
-    background: var(--surface-strong);
-  }
-
-  .theme-table th {
-    color: var(--text);
-    border-bottom: 1px solid var(--glass-border);
-  }
-
-  .theme-table td {
-    color: var(--text);
-    border-bottom: 1px solid var(--glass-border);
-  }
-
-  .theme-table tbody tr:hover {
-    background: var(--surface);
-  }
-
-  .theme-badge {
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    padding: 0.125rem 0.625rem;
-    border: 1px solid;
   }
 }
 
 @layer utilities {
   .sidebar-transition {
     transition: transform 0.3s ease;
-  }
-
-  /* Text colors */
-  .theme-title {
-    color: var(--text);
-  }
-
-  .theme-text {
-    color: var(--text);
-  }
-
-  .theme-muted {
-    color: var(--muted);
-  }
-
-  .text-themed {
-    color: var(--text);
-  }
-
-  .text-muted {
-    color: var(--muted);
-  }
-
-  /* Background colors */
-  .bg-themed {
-    background-color: var(--bg-soft);
-  }
-
-  .bg-surface {
-    background: var(--surface);
-  }
-
-  .bg-surface-strong {
-    background: var(--surface-strong);
-  }
-
-  .bg-card {
-    background: var(--glass-bg-strong);
-  }
-
-  /* Border colors */
-  .border-themed {
-    border-color: var(--glass-border);
-  }
-
-  .border-themed-strong {
-    border-color: var(--glass-border);
-  }
-
-  /* Accent colors */
-  .text-accent {
-    color: var(--accent);
-  }
-
-  .text-accent-2 {
-    color: var(--accent-2);
-  }
-
-  .bg-accent {
-    background-color: var(--accent);
-  }
-
-  .bg-accent-light {
-    background-color: rgba(59, 130, 246, 0.1);
-  }
-
-  /* Status colors */
-  .text-success {
-    color: var(--success);
-  }
-
-  .text-warning {
-    color: var(--warning);
-  }
-
-  .text-danger {
-    color: var(--danger);
-  }
-
-  .bg-success-light {
-    background-color: rgba(16, 185, 129, 0.1);
-  }
-
-  .bg-warning-light {
-    background-color: rgba(245, 158, 11, 0.1);
-  }
-
-  .bg-danger-light {
-    background-color: rgba(239, 68, 68, 0.1);
-  }
-
-  /* Placeholder */
-  .placeholder-muted::placeholder {
-    color: var(--muted);
   }
 }
 

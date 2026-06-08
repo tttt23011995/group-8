@@ -8,7 +8,6 @@ import Scorecard from './pages/Scorecard';
 import AIRisk from './pages/AIRisk';
 import { seedData } from './lib/data';
 import { RefreshContext } from './lib/RefreshContext';
-import { ThemeProvider } from './lib/ThemeContext';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -25,22 +24,20 @@ export default function App() {
   const navigate = setCurrentPage;
 
   return (
-    <ThemeProvider>
-      <RefreshContext.Provider value={{ refreshKey, triggerRefresh }}>
-        <div className="min-h-screen bg-themed-bg-soft">
-          <Sidebar currentPage={currentPage} onNavigate={navigate} />
-          <main className="main-content md:ml-[220px] transition-[margin] duration-300">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-              {currentPage === 'dashboard' && <Dashboard />}
-              {currentPage === 'vendors' && <Vendors />}
-              {currentPage === 'purchase-orders' && <PurchaseOrders />}
-              {currentPage === 'delivery' && <Delivery onNavigate={navigate} />}
-              {currentPage === 'scorecard' && <Scorecard />}
-              {currentPage === 'ai-risk' && <AIRisk />}
-            </div>
-          </main>
-        </div>
-      </RefreshContext.Provider>
-    </ThemeProvider>
+    <RefreshContext.Provider value={{ refreshKey, triggerRefresh }}>
+      <div className="min-h-screen bg-navy-900">
+        <Sidebar currentPage={currentPage} onNavigate={navigate} />
+        <main className="main-content md:ml-[220px] transition-[margin] duration-300">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+            {currentPage === 'dashboard' && <Dashboard />}
+            {currentPage === 'vendors' && <Vendors />}
+            {currentPage === 'purchase-orders' && <PurchaseOrders />}
+            {currentPage === 'delivery' && <Delivery onNavigate={navigate} />}
+            {currentPage === 'scorecard' && <Scorecard />}
+            {currentPage === 'ai-risk' && <AIRisk />}
+          </div>
+        </main>
+      </div>
+    </RefreshContext.Provider>
   );
 }

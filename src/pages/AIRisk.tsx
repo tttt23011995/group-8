@@ -362,7 +362,7 @@ function RiskCard({ title, data }: { title: string; data: RiskSubCategory }) {
       >
         <div className="flex items-center gap-3">
           <Icon className={`w-5 h-5 ${cfg.color}`} />
-          <h3 className="theme-title font-semibold">{title}</h3>
+          <h3 className="text-white font-semibold">{title}</h3>
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${cfg.badge}`}>
           {data.level} Risk
@@ -370,15 +370,15 @@ function RiskCard({ title, data }: { title: string; data: RiskSubCategory }) {
       </div>
 
       <div className="p-5 space-y-4">
-        <p className="text-sm theme-muted leading-relaxed">{data.summary}</p>
+        <p className="text-sm text-slate-300 leading-relaxed">{data.summary}</p>
 
         <div>
-          <h4 className="text-xs font-semibold theme-muted uppercase tracking-wider mb-2">
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
             Risk Factors
           </h4>
           <ul className="space-y-1.5">
             {data.factors.map((f, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm theme-muted">
+              <li key={i} className="flex items-start gap-2 text-sm text-slate-400">
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${cfg.barFill} flex-shrink-0 mt-1.5`}
                 />
@@ -389,12 +389,12 @@ function RiskCard({ title, data }: { title: string; data: RiskSubCategory }) {
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold theme-muted uppercase tracking-wider mb-2">
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
             Mitigation Steps
           </h4>
           <ol className="space-y-1.5">
             {data.mitigations.map((m, i) => (
-              <li key={i} className="flex items-start gap-2.5 text-sm theme-muted">
+              <li key={i} className="flex items-start gap-2.5 text-sm text-slate-300">
                 <span
                   className={`w-5 h-5 rounded-full ${cfg.barBg} flex items-center justify-center text-[10px] font-bold ${cfg.color} flex-shrink-0`}
                 >
@@ -426,15 +426,15 @@ function HistoryPanel({
   return (
     <div className="fixed inset-0 z-[200] flex items-start justify-center p-4 pt-[5vh]">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 theme-modal rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden shadow-2xl">
-        <div className="px-6 py-4 border-b border-themed flex items-center justify-between">
+      <div className="relative z-10 bg-navy-800 border border-blue-900/40 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden shadow-2xl">
+        <div className="px-6 py-4 border-b border-blue-900/40 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <History className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-bold theme-title">Analysis History</h2>
+            <h2 className="text-lg font-bold text-white">Analysis History</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/5 theme-muted hover:theme-title transition-colors"
+            className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -443,19 +443,19 @@ function HistoryPanel({
         <div className="overflow-y-auto max-h-[calc(80vh-64px)]">
           {analyses.length === 0 ? (
             <div className="p-12 text-center">
-              <History className="w-12 h-12 mx-auto mb-3 theme-muted opacity-30" />
-              <p className="theme-muted">No saved analyses yet</p>
+              <History className="w-12 h-12 mx-auto mb-3 text-slate-600" />
+              <p className="text-slate-500">No saved analyses yet</p>
             </div>
           ) : (
             analyses.map((a) => (
               <div
                 key={a.id}
-                className="px-6 py-4 border-b border-themed/50 hover:bg-white/[0.02] cursor-pointer transition-colors"
+                className="px-6 py-4 border-b border-blue-900/20 hover:bg-white/[0.02] cursor-pointer transition-colors"
                 onClick={() => onSelect(a)}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="theme-title font-medium text-sm">{a.vendorName}</span>
-                  <span className="text-xs theme-muted">
+                  <span className="text-white font-medium text-sm">{a.vendorName}</span>
+                  <span className="text-xs text-slate-500">
                     {new Date(a.timestamp).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -467,8 +467,8 @@ function HistoryPanel({
                 </div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs text-blue-400">{a.category}</span>
-                  <span className="text-xs theme-muted">|</span>
-                  <span className="text-xs theme-muted">
+                  <span className="text-xs text-slate-600">|</span>
+                  <span className="text-xs text-slate-400">
                     ${a.annualSpend.toLocaleString()} annual
                   </span>
                   {a.demoMode && (
@@ -523,8 +523,8 @@ function MetricTile({
   colorClass?: string;
 }) {
   return (
-    <div className="bg-surface-strong rounded-lg p-3">
-      <p className="text-[10px] theme-muted uppercase tracking-wide mb-0.5">{label}</p>
+    <div className="bg-navy-700/50 rounded-lg p-3">
+      <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">{label}</p>
       <p className={`text-sm font-semibold ${colorClass}`}>{value}</p>
     </div>
   );
@@ -592,12 +592,12 @@ function LoadedDataPreview({ ctx }: { ctx: SupplierContext }) {
   };
 
   return (
-    <div className="mt-4 rounded-xl border border-themed bg-surface-strong/30 overflow-hidden">
+    <div className="mt-4 rounded-xl border border-blue-900/40 bg-navy-700/30 overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-themed flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-blue-900/30 flex items-center gap-2">
         <Database className="w-4 h-4 text-blue-400" />
-        <h3 className="text-sm font-bold theme-title">Loaded Data Preview</h3>
-        <span className="ml-auto text-[10px] theme-muted uppercase tracking-wide">
+        <h3 className="text-sm font-bold text-white">Loaded Data Preview</h3>
+        <span className="ml-auto text-[10px] text-slate-500 uppercase tracking-wide">
           Live from procurement system
         </span>
       </div>
@@ -673,7 +673,7 @@ function LoadedDataPreview({ ctx }: { ctx: SupplierContext }) {
         {/* Detected Risk Flags */}
         {ctx.detectedRisks.length > 0 && (
           <div>
-            <p className="text-[10px] theme-muted uppercase tracking-wide mb-2">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-2">
               System-Detected Risk Flags
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -695,7 +695,7 @@ function LoadedDataPreview({ ctx }: { ctx: SupplierContext }) {
         {ctx.detectedRisks.length === 0 && (
           <div className="flex items-center gap-2">
             <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-            <p className="text-xs text-success">No risk flags detected by procurement system</p>
+            <p className="text-xs text-emerald-400">No risk flags detected by procurement system</p>
           </div>
         )}
       </div>
@@ -727,10 +727,10 @@ function ApiKeyManager({ onKeyChange }: { onKeyChange: () => void }) {
   }
 
   return (
-    <div className="mt-4 pt-4 border-t border-themed space-y-3">
+    <div className="mt-4 pt-4 border-t border-blue-900/30 space-y-3">
       <div className="flex items-center gap-2">
         <Key className="w-4 h-4 text-blue-400 flex-shrink-0" />
-        <p className="text-xs font-semibold theme-muted">Groq API Key</p>
+        <p className="text-xs font-semibold text-slate-300">Groq API Key</p>
         <span
           className={`ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
             keyLoaded
@@ -752,7 +752,7 @@ function ApiKeyManager({ onKeyChange }: { onKeyChange: () => void }) {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
               placeholder="Paste your Groq API key (gsk_...)"
-              className="w-full px-3 py-2 pr-10 theme-input border border-themed rounded-lg theme-text placeholder-muted text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              className="w-full px-3 py-2 pr-10 bg-navy-700 border border-blue-900/40 rounded-lg text-white placeholder-slate-600 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               autoComplete="off"
               spellCheck={false}
             />
@@ -786,7 +786,7 @@ function ApiKeyManager({ onKeyChange }: { onKeyChange: () => void }) {
         </button>
       )}
 
-      <p className="text-[10px] theme-muted leading-relaxed">
+      <p className="text-[10px] text-slate-600 leading-relaxed">
         Your key is stored in sessionStorage only and cleared when you close this tab.
         It is never written to disk or localStorage.
       </p>
@@ -1168,17 +1168,17 @@ Recent Issues: ${form.notes || 'None reported'}`;
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold theme-title flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <ShieldAlert className="w-7 h-7 text-blue-400" />
             AI Risk Analyzer
           </h1>
-          <p className="theme-muted text-sm mt-1">
+          <p className="text-slate-400 text-sm mt-1">
             Procurement-aware AI risk assessment with data-driven mitigation strategies
           </p>
         </div>
         <button
           onClick={() => setShowHistory(true)}
-          className="relative z-2 flex items-center gap-1.5 px-4 py-2.5 bg-surface-strong hover:bg-surface theme-muted text-sm font-semibold rounded-lg transition-colors border border-themed"
+          className="relative z-2 flex items-center gap-1.5 px-4 py-2.5 bg-navy-700 hover:bg-navy-600 text-slate-300 text-sm font-semibold rounded-lg transition-colors border border-blue-900/40"
         >
           <History className="w-4 h-4" />
           History ({history.length})
@@ -1207,7 +1207,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
       )}
 
       {/* Demo Mode Toggle + API Key Manager */}
-      <div className="relative z-1 theme-card rounded-xl px-5 py-4">
+      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl px-5 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
@@ -1222,8 +1222,8 @@ Recent Issues: ${form.notes || 'None reported'}`;
               )}
             </div>
             <div>
-              <p className="text-sm theme-title font-medium">Demo Mode</p>
-              <p className="text-xs theme-muted">
+              <p className="text-sm text-white font-medium">Demo Mode</p>
+              <p className="text-xs text-slate-500">
                 {demoMode
                   ? 'Using example data — no API calls'
                   : 'Live AI analysis via Groq (llama-3.3-70b-versatile)'}
@@ -1250,9 +1250,9 @@ Recent Issues: ${form.notes || 'None reported'}`;
       </div>
 
       {/* Input Form */}
-      <div className="relative z-1 theme-card rounded-xl p-5 sm:p-6">
+      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-5 sm:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold theme-title">Risk Assessment Parameters</h2>
+          <h2 className="text-lg font-bold text-white">Risk Assessment Parameters</h2>
           {isVendorMode && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/25">
               <Database className="w-3 h-3" />
@@ -1263,17 +1263,17 @@ Recent Issues: ${form.notes || 'None reported'}`;
 
         {/* Vendor Selector */}
         <div className="mb-4">
-          <label className="block text-sm theme-muted mb-1.5">
+          <label className="block text-sm text-slate-400 mb-1.5">
             Load from Vendor Directory
-            <span className="theme-muted ml-1">(optional — auto-fills all procurement data)</span>
+            <span className="text-slate-600 ml-1">(optional — auto-fills all procurement data)</span>
           </label>
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <select
                 value={selectedVendorId || ''}
                 onChange={(e) => handleVendorSelect(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 theme-select border border-themed rounded-lg theme-muted text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2"
+                className="w-full pl-10 pr-10 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2"
               >
                 <option value="">Select a vendor to load live data...</option>
                 {vendors.map((v: Vendor) => (
@@ -1287,7 +1287,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
             {selectedVendorId && (
               <button
                 onClick={clearVendorSelection}
-                className="relative z-2 px-3 py-2.5 bg-surface-strong border border-themed rounded-lg theme-muted hover:theme-title transition-colors"
+                className="relative z-2 px-3 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-slate-400 hover:text-white transition-colors"
                 title="Clear selection"
               >
                 <X className="w-4 h-4" />
@@ -1306,36 +1306,36 @@ Recent Issues: ${form.notes || 'None reported'}`;
           {/* Vendor Name + Category — read-only in vendor mode */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm theme-muted mb-1.5">
-                Vendor Name <span className="text-danger">*</span>
+              <label className="block text-sm text-slate-400 mb-1.5">
+                Vendor Name <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 value={form.vendorName}
                 onChange={(e) => !isVendorMode && setForm({ ...form, vendorName: e.target.value })}
                 readOnly={isVendorMode}
-                className={`w-full px-4 py-2.5 theme-input border border-themed rounded-lg theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${
+                className={`w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${
                   isVendorMode ? 'opacity-60 cursor-default' : ''
                 }`}
                 placeholder="Enter vendor name"
               />
             </div>
             <div>
-              <label className="block text-sm theme-muted mb-1.5">Product Category</label>
+              <label className="block text-sm text-slate-400 mb-1.5">Product Category</label>
               <div className="relative">
                 {isVendorMode ? (
                   <input
                     type="text"
                     value={form.category}
                     readOnly
-                    className="w-full px-4 py-2.5 theme-input border border-themed rounded-lg theme-text text-sm opacity-60 cursor-default relative z-2"
+                    className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm opacity-60 cursor-default relative z-2"
                   />
                 ) : (
                   <>
                     <select
                       value={form.category}
                       onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      className="w-full theme-select border border-themed rounded-lg px-4 py-2.5 theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
+                      className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
                     >
                       {CATEGORIES.map((c) => (
                         <option key={c} value={c}>
@@ -1343,7 +1343,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 theme-muted pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
                   </>
                 )}
               </div>
@@ -1353,7 +1353,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
           {/* Spend + Alt Suppliers + Delay */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm theme-muted mb-1.5">
+              <label className="block text-sm text-slate-400 mb-1.5">
                 Annual Spend (USD)
                 {isVendorMode && (
                   <span className="text-blue-400 ml-1 text-xs">
@@ -1367,26 +1367,26 @@ Recent Issues: ${form.notes || 'None reported'}`;
                 type="number"
                 value={form.annualSpend}
                 onChange={(e) => setForm({ ...form, annualSpend: e.target.value })}
-                className="w-full px-4 py-2.5 theme-input border border-themed rounded-lg theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+                className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
                 placeholder="500000"
                 min="0"
               />
             </div>
             <div>
-              <label className="block text-sm theme-muted mb-1.5">
+              <label className="block text-sm text-slate-400 mb-1.5">
                 Alternative Suppliers
-                <span className="theme-muted ml-1">(0 = sole source)</span>
+                <span className="text-slate-600 ml-1">(0 = sole source)</span>
               </label>
               <input
                 type="number"
                 value={form.alternativeSuppliers}
                 onChange={(e) => setForm({ ...form, alternativeSuppliers: e.target.value })}
-                className="w-full px-4 py-2.5 theme-input border border-themed rounded-lg theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+                className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
                 min="0"
               />
             </div>
             <div>
-              <label className="block text-sm theme-muted mb-1.5">
+              <label className="block text-sm text-slate-400 mb-1.5">
                 Avg Delivery Delay (days)
                 {isVendorMode && (
                   <span className="text-slate-500 ml-1 text-xs">(from system)</span>
@@ -1397,7 +1397,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
                 value={form.avgDeliveryDelay}
                 onChange={(e) => !isVendorMode && setForm({ ...form, avgDeliveryDelay: e.target.value })}
                 readOnly={isVendorMode}
-                className={`w-full px-4 py-2.5 theme-input border border-themed rounded-lg theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${
+                className={`w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${
                   isVendorMode ? 'opacity-60 cursor-default' : ''
                 }`}
                 min="0"
@@ -1409,8 +1409,8 @@ Recent Issues: ${form.notes || 'None reported'}`;
           {!isVendorMode && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm theme-muted mb-1.5">
-                  Avg Quality Score <span className="theme-muted">(1-5)</span>
+                <label className="block text-sm text-slate-400 mb-1.5">
+                  Avg Quality Score <span className="text-slate-600">(1-5)</span>
                 </label>
                 <input
                   type="number"
@@ -1419,18 +1419,18 @@ Recent Issues: ${form.notes || 'None reported'}`;
                     const val = Math.min(5, Math.max(1, parseInt(e.target.value) || 1));
                     setForm({ ...form, avgQualityScore: String(val) });
                   }}
-                  className="w-full px-4 py-2.5 theme-input border border-themed rounded-lg theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+                  className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
                   min="1"
                   max="5"
                 />
               </div>
               <div>
-                <label className="block text-sm theme-muted mb-1.5">Payment Terms</label>
+                <label className="block text-sm text-slate-400 mb-1.5">Payment Terms</label>
                 <div className="relative">
                   <select
                     value={form.paymentTerms}
                     onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}
-                    className="w-full theme-select border border-themed rounded-lg px-4 py-2.5 theme-text text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
+                    className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
                   >
                     {PAYMENT_TERMS.map((pt) => (
                       <option key={pt} value={pt}>
@@ -1483,19 +1483,19 @@ Recent Issues: ${form.notes || 'None reported'}`;
 
       {/* Loading Animation */}
       {loading && (
-        <div className="relative z-1 theme-card rounded-xl p-8 text-center">
+        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
-            <span className="theme-title font-semibold">{LOADING_MESSAGES[loadingMsgIdx]}</span>
+            <span className="text-white font-semibold">{LOADING_MESSAGES[loadingMsgIdx]}</span>
           </div>
-          <div className="w-48 mx-auto h-1 bg-surface-strong rounded-full overflow-hidden">
+          <div className="w-48 mx-auto h-1 bg-navy-700 rounded-full overflow-hidden">
             <div
               className="h-full bg-blue-500 rounded-full transition-all duration-700"
               style={{ width: `${((loadingMsgIdx + 1) / LOADING_MESSAGES.length) * 100}%` }}
             />
           </div>
           {supplierCtx && (
-            <p className="text-xs theme-muted mt-3">
+            <p className="text-xs text-slate-500 mt-3">
               Analyzing live procurement data for{' '}
               <span className="text-blue-400">{supplierCtx.vendorName}</span>
             </p>
@@ -1526,7 +1526,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
       {result && !loading && !error && (
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <h2 className="text-lg font-bold theme-title">Risk Assessment Results</h2>
+            <h2 className="text-lg font-bold text-white">Risk Assessment Results</h2>
             <div className="flex items-center gap-2 flex-wrap">
               {(['supplyChain', 'financial', 'operational'] as const).map((key) => {
                 const label =
@@ -1551,9 +1551,9 @@ Recent Issues: ${form.notes || 'None reported'}`;
           </div>
 
           {supplierCtx && (
-            <div className="relative z-1 theme-card rounded-xl px-5 py-3 flex items-center gap-2">
+            <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl px-5 py-3 flex items-center gap-2">
               <Info className="w-4 h-4 text-blue-400" />
-              <p className="text-xs theme-muted">
+              <p className="text-xs text-slate-400">
                 Analysis based on live procurement data for{' '}
                 <span className="text-blue-400 font-medium">{supplierCtx.vendorName}</span>{' '}
                 — Overall Risk Score: {supplierCtx.overallRiskScore}/100 ({supplierCtx.riskLevel} Risk),{' '}
@@ -1570,7 +1570,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
           </div>
 
           {demoMode && (
-            <p className="text-center text-xs theme-muted mt-2">
+            <p className="text-center text-xs text-slate-600 mt-2">
               Results generated in Demo Mode. Add a Groq API key above to enable live analysis.
             </p>
           )}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Chart } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -23,7 +23,6 @@ import { Users, FileText, AlertTriangle, Star, TrendingUp, TrendingDown } from '
 import { getVendors, getPurchaseOrders, getChartData, Vendor, PurchaseOrder } from '../lib/data';
 import { useAnimatedCounter } from '../lib/useAnimatedCounter';
 import { useRefresh } from '../lib/RefreshContext';
-import { useTheme } from '../lib/ThemeContext';
 
 ChartJS.register(
   CategoryScale,
@@ -54,12 +53,12 @@ function isOverdue(po: PurchaseOrder): boolean {
 }
 
 const statusColors: Record<string, string> = {
-  Ordered: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-500/30',
-  pending: 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-500/30',
-  approved: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-500/30',
-  shipped: 'bg-cyan-100 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 border-cyan-300 dark:border-cyan-500/30',
-  delivered: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30',
-  overdue: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-300 dark:border-red-500/30',
+  Ordered: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  approved: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  shipped: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+  delivered: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  overdue: 'bg-red-500/20 text-red-400 border-red-500/30',
 };
 
 type RangeOption = '3M' | '6M' | '12M';
@@ -78,19 +77,19 @@ function KPICard({ label, mobileLabel, value, icon: Icon, borderColor, trend }: 
   const animated = useAnimatedCounter(value);
 
   return (
-    <div className="kpi-card theme-card overflow-hidden transition-shadow duration-300 hover:shadow-lg" style={{ borderLeft: '4px solid', borderLeftColor: borderColor }}>
+    <div className="kpi-card relative bg-navy-800 border border-blue-900/40 rounded-xl overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:shadow-blue-900/20" style={{ borderLeft: '4px solid', borderLeftColor: borderColor }}>
       <div className="kpi-inner p-5 pl-6">
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1 pr-2">
-            <p className="kpi-label text-sm theme-muted font-medium truncate md:hidden">{mobileLabel}</p>
-            <p className="kpi-label text-sm theme-muted font-medium truncate hidden md:block">{label}</p>
-            <p className="kpi-value text-3xl font-bold theme-title mt-1">{animated}</p>
+            <p className="kpi-label text-sm text-slate-400 font-medium truncate md:hidden">{mobileLabel}</p>
+            <p className="kpi-label text-sm text-slate-400 font-medium truncate hidden md:block">{label}</p>
+            <p className="kpi-value text-3xl font-bold text-white mt-1">{animated}</p>
           </div>
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <div className="w-12 h-12 rounded-lg bg-surface flex items-center justify-center">
-              <Icon className="w-6 h-6 text-accent" />
+            <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
+              <Icon className="w-6 h-6 text-blue-400" />
             </div>
-            <div className={`flex items-center gap-0.5 text-xs font-medium ${trend.direction === 'up' ? 'text-success' : 'text-danger'}`}>
+            <div className={`flex items-center gap-0.5 text-xs font-medium ${trend.direction === 'up' ? 'text-emerald-400' : 'text-red-400'}`}>
               {trend.direction === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               <span>{trend.direction === 'up' ? '+' : '-'}{trend.pct}%</span>
             </div>
@@ -107,7 +106,6 @@ export default function Dashboard() {
   const [range, setRange] = useState<RangeOption>('6M');
   const [chartPayload, setChartPayload] = useState<{ months: string[]; counts: number[]; spends: number[]; availableMonths: number }>({ months: [], counts: [], spends: [], availableMonths: 0 });
   const { refreshKey } = useRefresh();
-  const { theme } = useTheme();
 
   useEffect(() => {
     getVendors().then(setVendors).catch(() => {});
@@ -140,7 +138,7 @@ export default function Dashboard() {
         type: 'bar' as const,
         label: 'PO Count',
         data: chartPayload.counts,
-        backgroundColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.55)' : 'rgba(59, 130, 246, 0.7)',
+        backgroundColor: 'rgba(59, 130, 246, 0.55)',
         borderColor: 'rgba(59, 130, 246, 1)',
         borderWidth: 1,
         borderRadius: 6,
@@ -153,7 +151,7 @@ export default function Dashboard() {
         label: 'Total Spend ($)',
         data: chartPayload.spends,
         borderColor: '#f97316',
-        backgroundColor: theme === 'dark' ? 'rgba(249, 115, 22, 0.12)' : 'rgba(249, 115, 22, 0.15)',
+        backgroundColor: 'rgba(249, 115, 22, 0.12)',
         borderWidth: 2,
         pointBackgroundColor: '#f97316',
         pointRadius: 4,
@@ -173,7 +171,7 @@ export default function Dashboard() {
       legend: {
         display: true,
         labels: {
-          color: theme === 'dark' ? '#94a3b8' : '#64748b',
+          color: '#94a3b8',
           usePointStyle: true,
           pointStyle: 'circle' as const,
           font: { size: 11 },
@@ -183,16 +181,16 @@ export default function Dashboard() {
       title: {
         display: true,
         text: 'Monthly PO Activity',
-        color: theme === 'dark' ? '#fff' : '#0f172a',
+        color: '#fff',
         font: { size: 14, weight: 'bold' as const },
         padding: { bottom: 12 },
       },
       tooltip: {
-        backgroundColor: theme === 'dark' ? '#0f2244' : '#ffffff',
-        borderColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.2)',
+        backgroundColor: '#0f2244',
+        borderColor: 'rgba(59, 130, 246, 0.3)',
         borderWidth: 1,
-        titleColor: theme === 'dark' ? '#e2e8f0' : '#0f172a',
-        bodyColor: theme === 'dark' ? '#94a3b8' : '#64748b',
+        titleColor: '#e2e8f0',
+        bodyColor: '#94a3b8',
         padding: 10,
         callbacks: {
           label: (ctx: { dataset: { label?: string }; parsed: { y: number | null } }) => {
@@ -207,15 +205,15 @@ export default function Dashboard() {
     },
     scales: {
       x: {
-        ticks: { color: theme === 'dark' ? '#64748b' : '#94a3b8', maxTicksLimit: 6, maxRotation: 0, autoSkip: true },
-        grid: { color: theme === 'dark' ? 'rgba(30, 58, 95, 0.5)' : 'rgba(148, 163, 184, 0.3)' },
+        ticks: { color: '#64748b', maxTicksLimit: 6, maxRotation: 0, autoSkip: true },
+        grid: { color: 'rgba(30, 58, 95, 0.5)' },
       },
       y: {
         beginAtZero: true,
         position: 'left' as const,
-        ticks: { color: theme === 'dark' ? '#64748b' : '#94a3b8', stepSize: 2 },
-        grid: { color: theme === 'dark' ? 'rgba(30, 58, 95, 0.5)' : 'rgba(148, 163, 184, 0.3)' },
-        title: { display: true, text: 'PO Count', color: theme === 'dark' ? '#64748b' : '#94a3b8', font: { size: 10 } },
+        ticks: { color: '#64748b', stepSize: 2 },
+        grid: { color: 'rgba(30, 58, 95, 0.5)' },
+        title: { display: true, text: 'PO Count', color: '#64748b', font: { size: 10 } },
       },
       y1: {
         beginAtZero: true,
@@ -234,18 +232,18 @@ export default function Dashboard() {
     <div className="overflow-x-auto">
       <table className="w-full text-sm border-collapse">
         <thead>
-          <tr className="border-b border-themed">
-            <th className="px-4 py-2 text-left theme-muted font-medium">Month</th>
-            <th className="px-4 py-2 text-right theme-muted font-medium">PO Count</th>
-            <th className="px-4 py-2 text-right theme-muted font-medium">Total Spend</th>
+          <tr className="border-b border-blue-900/40">
+            <th className="px-4 py-2 text-left text-slate-400 font-medium">Month</th>
+            <th className="px-4 py-2 text-right text-slate-400 font-medium">PO Count</th>
+            <th className="px-4 py-2 text-right text-slate-400 font-medium">Total Spend</th>
           </tr>
         </thead>
         <tbody>
           {chartPayload.months.map((m, i) => (
-            <tr key={m} className="border-b border-themed">
-              <td className="px-4 py-2 theme-text">{m}</td>
-              <td className="px-4 py-2 text-right theme-title">{chartPayload.counts[i]}</td>
-              <td className="px-4 py-2 text-right text-orange-500">${chartPayload.spends[i].toLocaleString()}</td>
+            <tr key={m} className="border-b border-blue-900/20">
+              <td className="px-4 py-2 text-slate-300">{m}</td>
+              <td className="px-4 py-2 text-right text-white">{chartPayload.counts[i]}</td>
+              <td className="px-4 py-2 text-right text-orange-400">${chartPayload.spends[i].toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
@@ -264,7 +262,7 @@ export default function Dashboard() {
 
       <div className="flex flex-col gap-6">
         {/* Chart panel */}
-        <div className="relative z-1 theme-card p-4 sm:p-6">
+        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex gap-1.5">
               {(['3M', '6M', '12M'] as RangeOption[]).map((r) => (
@@ -274,8 +272,8 @@ export default function Dashboard() {
                   style={{ minHeight: 32, fontSize: 12, position: 'relative', zIndex: 2, pointerEvents: 'auto' }}
                   className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
                     range === r
-                      ? 'bg-accent text-white'
-                      : 'bg-surface theme-muted hover:theme-text border border-themed'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-navy-700 text-slate-400 hover:text-white border border-blue-900/40'
                   }`}
                 >
                   {r}
@@ -289,43 +287,43 @@ export default function Dashboard() {
               <Chart type="bar" data={chartData} options={chartOptions} />
             ) : (
               <div>
-                <h3 className="theme-muted font-bold text-sm mb-3">Monthly PO Activity</h3>
+                <h3 className="text-slate-400 font-bold text-sm mb-3">Monthly PO Activity</h3>
                 {fallbackTable}
               </div>
             )}
           </div>
           {showAvailableNote && (
-            <p className="text-center mt-2 text-xs theme-muted">
+            <p className="text-center mt-2" style={{ fontSize: 11, color: '#94a3b8' }}>
               Showing available data only
             </p>
           )}
         </div>
 
         {/* Recent orders panel */}
-        <div className="relative z-1 theme-card p-4 sm:p-6">
-          <h3 className="text-sm font-bold theme-muted mb-4" style={{ fontSize: 15 }}>Recent Purchase Orders</h3>
+        <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-6">
+          <h3 className="text-sm font-bold text-slate-400 mb-4" style={{ fontSize: 15 }}>Recent Purchase Orders</h3>
 
           {/* Desktop table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-themed">
-                  <th className="px-3 py-2 text-left theme-muted font-medium">PO Number</th>
-                  <th className="px-3 py-2 text-left theme-muted font-medium">Vendor</th>
-                  <th className="px-3 py-2 text-left theme-muted font-medium">Date</th>
-                  <th className="px-3 py-2 text-right theme-muted font-medium">Total</th>
-                  <th className="px-3 py-2 text-left theme-muted font-medium">Status</th>
+                <tr className="border-b border-blue-900/40">
+                  <th className="px-3 py-2 text-left text-slate-500 font-medium">PO Number</th>
+                  <th className="px-3 py-2 text-left text-slate-500 font-medium">Vendor</th>
+                  <th className="px-3 py-2 text-left text-slate-500 font-medium">Date</th>
+                  <th className="px-3 py-2 text-right text-slate-500 font-medium">Total</th>
+                  <th className="px-3 py-2 text-left text-slate-500 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {pos.map((po) => (
-                  <tr key={po.id} className="border-b border-themed hover:bg-surface">
-                    <td className="px-3 py-2.5 theme-title font-mono text-xs whitespace-nowrap">{po.poNumber}</td>
-                    <td className="px-3 py-2.5 theme-text">{po.vendorName}</td>
-                    <td className="px-3 py-2.5 theme-muted">{po.date}</td>
-                    <td className="px-3 py-2.5 text-right theme-text">${po.total.toLocaleString()}</td>
+                  <tr key={po.id} className="border-b border-blue-900/20 hover:bg-white/[0.02]">
+                    <td className="px-3 py-2.5 text-white font-mono text-xs whitespace-nowrap">{po.poNumber}</td>
+                    <td className="px-3 py-2.5 text-slate-300">{po.vendorName}</td>
+                    <td className="px-3 py-2.5 text-slate-400">{po.date}</td>
+                    <td className="px-3 py-2.5 text-right text-slate-300">${po.total.toLocaleString()}</td>
                     <td className="px-3 py-2.5">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColors[po.status] || 'bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-500/30'}`}>
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColors[po.status] || 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
                         {po.status.charAt(0).toUpperCase() + po.status.slice(1)}
                       </span>
                     </td>
@@ -340,22 +338,29 @@ export default function Dashboard() {
             {pos.map((po) => (
               <div
                 key={po.id}
-                className="theme-panel p-3.5 mb-2.5"
+                style={{
+                  background: '#0f2244',
+                  borderRadius: 10,
+                  padding: 14,
+                  marginBottom: 10,
+                  position: 'relative',
+                  zIndex: 1,
+                }}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-accent font-bold text-[13px] font-mono">
+                  <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: 13, fontFamily: 'monospace' }}>
                     {po.poNumber}
                   </span>
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColors[po.status] || 'bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-500/30'}`}>
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColors[po.status] || 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
                     {po.status.charAt(0).toUpperCase() + po.status.slice(1)}
                   </span>
                 </div>
-                <p className="theme-title text-sm font-medium mb-1.5">
+                <p style={{ color: '#ffffff', fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
                   {po.vendorName}
                 </p>
                 <div className="flex items-center justify-between">
-                  <span className="theme-muted text-xs">{po.date}</span>
-                  <span className="theme-title font-semibold text-[13px]">
+                  <span style={{ color: '#94a3b8', fontSize: 12 }}>{po.date}</span>
+                  <span style={{ color: '#ffffff', fontWeight: 600, fontSize: 13 }}>
                     ${po.total.toLocaleString()}
                   </span>
                 </div>
