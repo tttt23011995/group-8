@@ -8,10 +8,6 @@ import {
   Title,
   Tooltip,
   Legend,
-  LineElement,
-  PointElement,
-  Filler,
-  ArcElement,
 } from 'chart.js';
 import {
   Package,
@@ -20,20 +16,13 @@ import {
   CheckCircle,
   AlertTriangle,
   ArrowRight,
+  ArrowLeft,
   FileText,
   Search,
   ChevronDown,
   Check,
   X as XIcon,
   MessageSquare,
-  ShieldAlert,
-  TrendingUp,
-  TrendingDown,
-  Users,
-  Lightbulb,
-  Target,
-  Info,
-  Activity,
 } from 'lucide-react';
 import {
   getPurchaseOrders,
@@ -44,14 +33,10 @@ import {
   DeliveryPerformance,
   DeliveryNote,
 } from '../lib/data';
-import {
-  buildSupplierRiskData,
-  SupplierMetrics,
-  SupplierRisk,
-  SupplierRiskEntry,
-} from '../lib/supplierRisk';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler, ArcElement);
+
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const STATUS_ORDER: PurchaseOrder['status'][] = [
   'ordered',
@@ -336,913 +321,6 @@ function DeliveryNotesPanel({
   );
 }
 
-// ── Risk helpers ──────────────────────────────────────────────────────────
-
-function riskConfig(level: 'Low' | 'Medium' | 'High') {
-  switch (level) {
-    case 'High':
-      return {
-        bg: 'bg-red-500/10 border-red-500/25',
-        badgeBg: 'bg-red-500/20 text-red-400 border-red-500/30',
-        bar: 'bg-red-500',
-        barTrack: 'bg-red-500/20',
-        text: 'text-red-400',
-        headerBg: 'bg-red-500/10 border-red-500/20',
-        icon: AlertTriangle,
-      };
-    case 'Medium':
-      return {
-        bg: 'bg-yellow-500/10 border-yellow-500/25',
-        badgeBg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-        bar: 'bg-yellow-500',
-        barTrack: 'bg-yellow-500/20',
-        text: 'text-yellow-400',
-        headerBg: 'bg-yellow-500/10 border-yellow-500/20',
-        icon: TrendingDown,
-      };
-    case 'Low':
-      return {
-        bg: 'bg-emerald-500/10 border-emerald-500/25',
-        badgeBg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-        bar: 'bg-emerald-500',
-        barTrack: 'bg-emerald-500/20',
-        text: 'text-emerald-400',
-        headerBg: 'bg-emerald-500/10 border-emerald-500/20',
-        icon: TrendingUp,
-      };
-  }
-}
-
-function RiskTypeBadge({ label }: { label: string }) {
-  const colorMap: Record<string, string> = {
-    'Delivery Delay Risk': 'bg-red-500/15 text-red-400 border-red-500/25',
-    'Lead Time Risk': 'bg-orange-500/15 text-orange-400 border-orange-500/25',
-    'Supplier Dependency Risk': 'bg-violet-500/15 text-violet-400 border-violet-500/25',
-    'Cost Concentration Risk': 'bg-amber-500/15 text-amber-400 border-amber-500/25',
-    'Supplier Performance Risk': 'bg-blue-500/15 text-blue-400 border-blue-500/25',
-  };
-  const cls = colorMap[label] ?? 'bg-slate-500/15 text-slate-400 border-slate-500/25';
-  return (
-    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold border ${cls}`}>
-      {label}
-    </span>
-  );
-}
-
-// ── Supplier Risk Dashboard Components ─────────────────────────────────────
-
-interface RiskDashboardData {
-  totalVendors: number;
-  highRiskVendors: number;
-  mediumRiskVendors: number;
-  lowRiskVendors: number;
-  avgRiskScore: number;
-  lateDeliveryRate: number;
-  overduePOs: number;
-}
-
-function computeRiskDashboardData(
-  riskData: SupplierRiskEntry[],
-  pos: PurchaseOrder[]
-): RiskDashboardData {
-  const totalVendors = riskData.length;
-  const highRiskVendors = riskData.filter(r => r.risk.overallRiskScore >= 70).length;
-  const mediumRiskVendors = riskData.filter(r => r.risk.overallRiskScore >= 40 && r.risk.overallRiskScore < 70).length;
-  const lowRiskVendors = riskData.filter(r => r.risk.overallRiskScore < 40).length;
-
-  const avgRiskScore = riskData.length > 0
-    ? Math.round(riskData.reduce((s, r) => s + r.risk.overallRiskScore, 0) / riskData.length)
-    : 0;
-
-  const delivered = pos.filter(p => p.status === 'delivered' || p.status === 'invoiced');
-  const perfMap = getDeliveryPerformance();
-  let lateCount = 0;
-  delivered.forEach(po => {
-    const perf = perfMap[po.id];
-    if (perf && !perf.onTime) lateCount++;
-  });
-  const lateDeliveryRate = delivered.length > 0 ? Math.round((lateCount / delivered.length) * 100) : 0;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const overduePOs = pos.filter(po => {
-    if (po.status === 'delivered' || po.status === 'invoiced') return false;
-    const deliveryDate = new Date(po.deliveryDate);
-    deliveryDate.setHours(0, 0, 0, 0);
-    return deliveryDate < today;
-  }).length;
-
-  return {
-    totalVendors,
-    highRiskVendors,
-    mediumRiskVendors,
-    lowRiskVendors,
-    avgRiskScore,
-    lateDeliveryRate,
-    overduePOs
-  };
-}
-
-// 1. KPI Cards Component
-function RiskKPICards({ data }: { data: RiskDashboardData }) {
-  const kpis = [
-    {
-      label: 'Total Vendors',
-      mobileLabel: 'Vendors',
-      value: data.totalVendors,
-      icon: Users,
-      borderColor: '#3b82f6',
-    },
-    {
-      label: 'High Risk Vendors',
-      mobileLabel: 'High Risk',
-      value: data.highRiskVendors,
-      icon: AlertTriangle,
-      borderColor: '#ef4444',
-    },
-    {
-      label: 'Late Delivery Rate',
-      mobileLabel: 'Late Rate',
-      value: data.lateDeliveryRate,
-      suffix: '%',
-      icon: Clock,
-      borderColor: '#f97316',
-    },
-    {
-      label: 'Avg Risk Score',
-      mobileLabel: 'Avg Score',
-      value: data.avgRiskScore,
-      suffix: '/100',
-      icon: ShieldAlert,
-      borderColor: '#8b5cf6',
-    },
-  ];
-
-  return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-      {kpis.map((kpi) => {
-        const Icon = kpi.icon;
-        return (
-          <div
-            key={kpi.label}
-            className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:shadow-blue-900/20"
-            style={{ borderLeft: '4px solid', borderLeftColor: kpi.borderColor }}
-          >
-            <div className="p-4 sm:p-5 pl-5">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1 pr-2">
-                  <p className="text-xs sm:text-sm text-slate-400 font-medium truncate md:hidden">{kpi.mobileLabel}</p>
-                  <p className="text-xs sm:text-sm text-slate-400 font-medium truncate hidden md:block">{kpi.label}</p>
-                  <p className="text-xl sm:text-2xl font-bold text-white mt-1">
-                    {kpi.value}{kpi.suffix || ''}
-                  </p>
-                </div>
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// 2. Risk Distribution Chart (Donut)
-function RiskDistributionChart({ data }: { data: SupplierRiskEntry[] }) {
-  const counts = { low: 0, medium: 0, high: 0 };
-  data.forEach(({ risk }) => {
-    if (risk.overallRiskScore < 40) counts.low++;
-    else if (risk.overallRiskScore < 70) counts.medium++;
-    else counts.high++;
-  });
-
-  const chartData = {
-    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
-    datasets: [{
-      data: [counts.low, counts.medium, counts.high],
-      backgroundColor: ['rgba(34, 197, 94, 0.8)', 'rgba(251, 146, 60, 0.8)', 'rgba(239, 68, 68, 0.8)'],
-      borderColor: ['rgba(34, 197, 94, 1)', 'rgba(251, 146, 60, 1)', 'rgba(239, 68, 68, 1)'],
-      borderWidth: 2,
-    }]
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'right' as const,
-        labels: {
-          color: '#94a3b8',
-          font: { size: 11 },
-          usePointStyle: true,
-          padding: 16,
-        }
-      },
-      tooltip: {
-        backgroundColor: '#0f2244',
-        borderColor: 'rgba(59, 130, 246, 0.3)',
-        borderWidth: 1,
-        titleColor: '#e2e8f0',
-        bodyColor: '#94a3b8',
-        callbacks: {
-          label: (ctx: { label: string; raw: number }) => ` ${ctx.label}: ${ctx.raw} vendors`
-        }
-      }
-    }
-  };
-
-  const total = counts.low + counts.medium + counts.high;
-
-  return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
-      <h3 className="text-sm font-bold text-white mb-4">Risk Distribution</h3>
-      <div className="h-[200px]">
-        {total > 0 ? (
-          <Chart type="doughnut" data={chartData} options={options as never} />
-        ) : (
-          <div className="h-full flex items-center justify-center text-slate-500 text-sm">
-            No vendor data available
-          </div>
-        )}
-      </div>
-      <div className="flex justify-center gap-4 mt-4 text-xs">
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          Low: {counts.low}
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-orange-400" />
-          Medium: {counts.medium}
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-red-500" />
-          High: {counts.high}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// 3. Vendor Ranking Table
-function VendorRankingTable({
-  data,
-  selectedVendorId,
-  onSelect
-}: {
-  data: SupplierRiskEntry[];
-  selectedVendorId: string | null;
-  onSelect: (vendorId: string) => void;
-}) {
-  function getMainRiskCategory(risk: SupplierRisk): string {
-    const scores = [
-      { label: 'Delivery Delay', score: risk.deliveryDelayRiskScore },
-      { label: 'Lead Time', score: risk.leadTimeRiskScore },
-      { label: 'Dependency', score: risk.supplierDependencyRiskScore },
-      { label: 'Performance', score: risk.supplierPerformanceRiskScore },
-    ];
-    const max = scores.reduce((a, b) => a.score > b.score ? a : b);
-    return max.score > 0 ? max.label : 'None';
-  }
-
-  return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-blue-900/40">
-        <h3 className="text-sm font-bold text-white">Vendor Risk Ranking</h3>
-        <p className="text-xs text-slate-500 mt-0.5">Sorted by risk score — click to view details</p>
-      </div>
-
-      {/* Desktop table */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-navy-800 border-b border-blue-900/30">
-            <tr>
-              <th className="px-4 py-3 text-left text-slate-500 font-medium">Vendor</th>
-              <th className="px-4 py-3 text-center text-slate-500 font-medium">Risk Score</th>
-              <th className="px-4 py-3 text-center text-slate-500 font-medium">Level</th>
-              <th className="px-4 py-3 text-left text-slate-500 font-medium">Main Risk</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map(({ metrics, risk }) => {
-              const cfg = riskConfig(risk.riskLevel);
-              const isSelected = selectedVendorId === risk.vendorId;
-              return (
-                <tr
-                  key={risk.vendorId}
-                  onClick={() => onSelect(risk.vendorId)}
-                  className={`border-b border-blue-900/20 cursor-pointer transition-colors ${
-                    isSelected ? 'bg-blue-600/20' : 'hover:bg-white/[0.02]'
-                  }`}
-                >
-                  <td className="px-4 py-3">
-                    <span className="text-white font-medium">{metrics.vendorName}</span>
-                    <p className="text-xs text-slate-500">{metrics.vendor.category}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className={`text-lg font-bold ${cfg.text}`}>{risk.overallRiskScore}</span>
-                      <span className="text-xs text-slate-600">/100</span>
-                      <div className="w-16 h-1.5 bg-navy-700 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${cfg.bar} rounded-full`}
-                          style={{ width: `${risk.overallRiskScore}%` }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.badgeBg}`}>
-                      {risk.riskLevel}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs text-slate-400">{getMainRiskCategory(risk)}</span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile cards */}
-      <div className="block md:hidden divide-y divide-blue-900/20">
-        {data.map(({ metrics, risk }) => {
-          const cfg = riskConfig(risk.riskLevel);
-          const isSelected = selectedVendorId === risk.vendorId;
-          return (
-            <div
-              key={risk.vendorId}
-              onClick={() => onSelect(risk.vendorId)}
-              className={`px-4 py-4 cursor-pointer ${isSelected ? 'bg-blue-600/20' : 'hover:bg-white/[0.02]'}`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-white font-medium text-sm">{metrics.vendorName}</span>
-                <div className="flex items-center gap-2">
-                  <span className={`text-lg font-bold ${cfg.text}`}>{risk.overallRiskScore}</span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${cfg.badgeBg}`}>
-                    {risk.riskLevel}
-                  </span>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 mt-1">{getMainRiskCategory(risk)}</p>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// 4. Delivery Trend Chart
-function DeliveryTrendChart({ pos }: { pos: PurchaseOrder[] }) {
-  const perfMap = getDeliveryPerformance();
-
-  // Group by month
-  const monthlyData: Record<string, { total: number; onTime: number }> = {};
-  pos.filter(p => p.status === 'delivered' || p.status === 'invoiced').forEach(po => {
-    const month = new Date(po.date).toLocaleString('en-US', { month: 'short', year: '2-digit' });
-    if (!monthlyData[month]) monthlyData[month] = { total: 0, onTime: 0 };
-    monthlyData[month].total++;
-    const perf = perfMap[po.id];
-    if (!perf || perf.onTime) monthlyData[month].onTime++;
-  });
-
-  const months = Object.keys(monthlyData).slice(-6);
-  const rates = months.map(m => {
-    const d = monthlyData[m];
-    return d.total > 0 ? Math.round((d.onTime / d.total) * 100) : 100;
-  });
-
-  const chartData = {
-    labels: months,
-    datasets: [{
-      label: 'On-Time Delivery %',
-      data: rates,
-      borderColor: 'rgba(59, 130, 246, 1)',
-      backgroundColor: 'rgba(59, 130, 246, 0.15)',
-      fill: true,
-      tension: 0.4,
-      pointRadius: 4,
-      pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-    }]
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#0f2244',
-        borderColor: 'rgba(59, 130, 246, 0.3)',
-        borderWidth: 1,
-        callbacks: {
-          label: (ctx: { parsed: { y: number } }) => ` ${ctx.parsed.y}% on-time`
-        }
-      }
-    },
-    scales: {
-      x: {
-        ticks: { color: '#64748b' },
-        grid: { color: 'rgba(30, 58, 95, 0.5)' }
-      },
-      y: {
-        min: 0,
-        max: 100,
-        ticks: { color: '#64748b', callback: (v: number | string) => `${v}%` },
-        grid: { color: 'rgba(30, 58, 95, 0.5)' }
-      }
-    }
-  };
-
-  return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
-      <h3 className="text-sm font-bold text-white mb-4">Delivery Reliability Trend</h3>
-      <div className="h-[200px]">
-        {months.length > 0 ? (
-          <Chart type="line" data={chartData} options={options as never} />
-        ) : (
-          <div className="h-full flex items-center justify-center text-slate-500 text-sm">
-            No delivery data available
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// 5. Risk Breakdown Chart
-function RiskBreakdownChart({ data }: { data: SupplierRiskEntry[] }) {
-  if (data.length === 0) {
-    return (
-      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
-        <h3 className="text-sm font-bold text-white mb-4">Risk Composition</h3>
-        <div className="h-[200px] flex items-center justify-center text-slate-500 text-sm">
-          No data available
-        </div>
-      </div>
-    );
-  }
-
-  const avgDelivery = data.reduce((s, r) => s + r.risk.deliveryDelayRiskScore, 0) / data.length;
-  const avgLeadTime = data.reduce((s, r) => s + r.risk.leadTimeRiskScore, 0) / data.length;
-  const avgDependency = data.reduce((s, r) => s + r.risk.supplierDependencyRiskScore, 0) / data.length;
-  const avgPerformance = data.reduce((s, r) => s + r.risk.supplierPerformanceRiskScore, 0) / data.length;
-
-  const chartData = {
-    labels: ['Delivery Delay', 'Lead Time', 'Dependency', 'Performance'],
-    datasets: [{
-      label: 'Avg Score',
-      data: [avgDelivery, avgLeadTime, avgDependency, avgPerformance],
-      backgroundColor: [
-        'rgba(239, 68, 68, 0.7)',
-        'rgba(249, 115, 22, 0.7)',
-        'rgba(139, 92, 246, 0.7)',
-        'rgba(59, 130, 246, 0.7)',
-      ],
-      borderColor: [
-        'rgba(239, 68, 68, 1)',
-        'rgba(249, 115, 22, 1)',
-        'rgba(139, 92, 246, 1)',
-        'rgba(59, 130, 246, 1)',
-      ],
-      borderWidth: 1.5,
-      borderRadius: 4,
-    }]
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#0f2244',
-        callbacks: {
-          label: (ctx: { label: string; parsed: { y: number } }) => ` ${ctx.label}: ${ctx.parsed.y.toFixed(1)} pts`
-        }
-      }
-    },
-    scales: {
-      x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(30, 58, 95, 0.5)' } },
-      y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(30, 58, 95, 0.5)' } }
-    }
-  };
-
-  return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 sm:p-5">
-      <h3 className="text-sm font-bold text-white mb-4">Risk Composition (Avg)</h3>
-      <div className="h-[200px]">
-        <Chart type="bar" data={chartData} options={options as never} />
-      </div>
-    </div>
-  );
-}
-
-// 6. Vendor Detail Panel with Risk Explanation
-function generateRiskExplanation(
-  metrics: SupplierMetrics,
-  risk: SupplierRisk
-): { heading: string; explanation: string; implications: string[] } {
-  const issues: string[] = [];
-  const implications: string[] = [];
-
-  if (risk.deliveryDelayRiskScore >= 15) {
-    issues.push(`${metrics.currentOverdueOrders} overdue order(s)`);
-    implications.push('Production schedules may be disrupted');
-  }
-  if (metrics.onTimeDeliveryRate < 80) {
-    issues.push(`only ${metrics.onTimeDeliveryRate}% on-time rate`);
-    implications.push('Consider safety stock or alternative suppliers');
-  }
-  if (risk.supplierDependencyRiskScore >= 10) {
-    issues.push(`${metrics.supplierSpendShare}% spend concentration`);
-    implications.push('Diversify supplier base to reduce single-point-of-failure');
-  }
-  if (risk.leadTimeRiskScore >= 10) {
-    issues.push(`extended lead time of ${metrics.averageLeadTime} days`);
-    implications.push('Plan orders further in advance');
-  }
-  if (risk.supplierPerformanceRiskScore >= 8) {
-    issues.push('below-average performance metrics');
-    implications.push('Issue performance improvement notice');
-  }
-
-  const heading = risk.riskLevel === 'High'
-    ? 'Critical Risk Detected'
-    : risk.riskLevel === 'Medium'
-    ? 'Moderate Risk Factors Identified'
-    : 'Low Risk Profile';
-
-  const explanation = issues.length > 0
-    ? `This vendor shows ${issues.join(', ')}.`
-    : 'This vendor meets performance expectations across all categories.';
-
-  return { heading, explanation, implications };
-}
-
-function VendorDetailPanel({
-  entry,
-  pos
-}: {
-  entry: SupplierRiskEntry | null;
-  pos: PurchaseOrder[];
-}) {
-  if (!entry) {
-    return (
-      <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-6 text-center">
-        <ShieldAlert className="w-10 h-10 mx-auto mb-3 text-slate-600" />
-        <p className="text-slate-500 text-sm">Select a vendor to view details</p>
-      </div>
-    );
-  }
-
-  const { metrics, risk } = entry;
-  const cfg = riskConfig(risk.riskLevel);
-  const RiskIcon = cfg.icon;
-  const analysis = generateRiskExplanation(metrics, risk);
-
-  // Get vendor POs
-  const vendorPOs = pos.filter(p => p.vendorId === metrics.vendorId);
-  const perfMap = getDeliveryPerformance();
-
-  return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl overflow-hidden">
-      {/* Header */}
-      <div className={`${cfg.bg} px-5 py-4 border-b border-current/30`}>
-        <div className="flex items-start justify-between">
-          <div className="min-w-0 flex-1">
-            <h3 className="text-white font-bold text-lg truncate">{metrics.vendorName}</h3>
-            <p className="text-xs text-slate-400 mt-0.5">{metrics.vendor.category}</p>
-          </div>
-          <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-4">
-            <div className="flex items-center gap-1">
-              <span className={`text-3xl font-bold ${cfg.text}`}>{risk.overallRiskScore}</span>
-              <span className="text-xs text-slate-600">/100</span>
-            </div>
-            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.badgeBg}`}>
-              <RiskIcon className="w-3 h-3" />
-              {risk.riskLevel} Risk
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Metrics Grid */}
-      <div className="p-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Status</p>
-          <p className={`text-sm font-semibold ${metrics.vendor.status === 'active' ? 'text-emerald-400' : 'text-slate-400'}`}>
-            {metrics.vendor.status}
-          </p>
-        </div>
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Lead Time</p>
-          <p className="text-sm font-semibold text-white">{metrics.vendorLeadTime} days</p>
-        </div>
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Total Orders</p>
-          <p className="text-sm font-semibold text-white">{metrics.totalOrders}</p>
-        </div>
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Total Spend</p>
-          <p className="text-sm font-semibold text-white">${metrics.supplierSpend.toLocaleString()}</p>
-        </div>
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Spend Share</p>
-          <p className="text-sm font-semibold text-white">{metrics.supplierSpendShare}%</p>
-        </div>
-        <div className="bg-navy-700/50 rounded-lg p-3">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">On-Time Rate</p>
-          <p className={`text-sm font-semibold ${metrics.onTimeDeliveryRate >= 90 ? 'text-emerald-400' : metrics.onTimeDeliveryRate >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
-            {metrics.onTimeDeliveryRate}%
-          </p>
-        </div>
-      </div>
-
-      {/* Risk Tags */}
-      {risk.detectedRiskTypes.length > 0 && (
-        <div className="px-5 pb-4">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-2">Detected Risks</p>
-          <div className="flex flex-wrap gap-1.5">
-            {risk.detectedRiskTypes.map((t) => (
-              <RiskTypeBadge key={t} label={t} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Risk Explanation */}
-      <div className={`mx-5 mb-5 p-4 rounded-lg border ${cfg.bg}`}>
-        <p className={`text-xs font-semibold mb-2 ${cfg.text}`}>{analysis.heading}</p>
-        <p className="text-xs text-slate-300 leading-relaxed">{analysis.explanation}</p>
-        {analysis.implications.length > 0 && (
-          <ul className="mt-2 space-y-1">
-            {analysis.implications.map((imp, i) => (
-              <li key={i} className="text-xs text-slate-400 flex items-start gap-1.5">
-                <ArrowRight className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                {imp}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* PO History */}
-      <div className="border-t border-blue-900/40">
-        <div className="px-5 py-3 border-b border-blue-900/20">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Purchase Order History</p>
-        </div>
-        {vendorPOs.length === 0 ? (
-          <div className="px-5 py-6 text-center text-sm text-slate-500">No orders</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="border-b border-blue-900/20">
-                <tr>
-                  <th className="px-4 py-2 text-left text-slate-500 font-medium">PO</th>
-                  <th className="px-4 py-2 text-left text-slate-500 font-medium">Date</th>
-                  <th className="px-4 py-2 text-left text-slate-500 font-medium">Expected</th>
-                  <th className="px-4 py-2 text-left text-slate-500 font-medium">Status</th>
-                  <th className="px-4 py-2 text-right text-slate-500 font-medium">Delay</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vendorPOs.map((po, idx) => {
-                  const ext = po as PurchaseOrder & { actualDeliveryDate?: string };
-                  const perf = perfMap[po.id];
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const deliveryDate = new Date(po.deliveryDate);
-                  deliveryDate.setHours(0, 0, 0, 0);
-
-                  let delayDays = 0;
-                  if (po.status === 'delivered' || po.status === 'invoiced') {
-                    if (ext.actualDeliveryDate) {
-                      const actual = new Date(ext.actualDeliveryDate);
-                      actual.setHours(0, 0, 0, 0);
-                      delayDays = Math.floor((actual.getTime() - deliveryDate.getTime()) / 86400000);
-                    } else if (perf) {
-                      delayDays = perf.daysDifference;
-                    }
-                  } else if (deliveryDate < today) {
-                    delayDays = Math.floor((today.getTime() - deliveryDate.getTime()) / 86400000);
-                  }
-
-                  const statusColors: Record<string, string> = {
-                    ordered: 'text-blue-400',
-                    confirmed: 'text-violet-400',
-                    'in-transit': 'text-amber-400',
-                    delivered: 'text-emerald-400',
-                    invoiced: 'text-slate-400'
-                  };
-
-                  return (
-                    <tr key={po.id || idx} className="border-b border-blue-900/10 hover:bg-white/[0.01]">
-                      <td className="px-4 py-2.5 text-white font-mono">{po.poNumber}</td>
-                      <td className="px-4 py-2.5 text-slate-400">{po.date}</td>
-                      <td className="px-4 py-2.5 text-slate-400">{po.deliveryDate}</td>
-                      <td className="px-4 py-2.5">
-                        <span className={`${statusColors[po.status] || 'text-slate-400'} font-medium`}>
-                          {po.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-right">
-                        {delayDays > 0 ? (
-                          <span className="text-red-400 font-semibold">+{delayDays}d</span>
-                        ) : delayDays < 0 ? (
-                          <span className="text-emerald-400">{delayDays}d</span>
-                        ) : (
-                          <span className="text-slate-500">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// 8. Procurement Insights
-function ProcurementInsights({ data }: { data: SupplierRiskEntry[] }) {
-  const insights: { icon: typeof Lightbulb; text: string; type: 'warning' | 'info' | 'success' }[] = [];
-
-  // High concentration
-  const highConcentration = data.filter(d => d.risk.supplierDependencyRiskScore >= 15);
-  if (highConcentration.length > 0) {
-    insights.push({
-      icon: AlertTriangle,
-      text: `High supplier concentration detected — ${highConcentration.length} vendor(s) exceed 35% spend share`,
-      type: 'warning'
-    });
-  }
-
-  // Declining delivery
-  const poorDelivery = data.filter(d => d.metrics.onTimeDeliveryRate < 80);
-  if (poorDelivery.length > 0) {
-    insights.push({
-      icon: TrendingDown,
-      text: `Delivery reliability concern — ${poorDelivery.length} vendor(s) with on-time rate below 80%`,
-      type: 'warning'
-    });
-  }
-
-  // Lead time instability
-  const longLeadTime = data.filter(d => d.risk.leadTimeRiskScore >= 10);
-  if (longLeadTime.length > 0) {
-    insights.push({
-      icon: Clock,
-      text: `Lead time instability — ${longLeadTime.length} vendor(s) with extended lead times`,
-      type: 'info'
-    });
-  }
-
-  // Performance issues
-  const lowPerformers = data.filter(d => d.risk.supplierPerformanceRiskScore >= 8);
-  if (lowPerformers.length > 0) {
-    insights.push({
-      icon: Activity,
-      text: `Performance gaps — ${lowPerformers.length} vendor(s) with below-average scores`,
-      type: 'info'
-    });
-  }
-
-  // Positive insight
-  const lowRisk = data.filter(d => d.risk.overallRiskScore < 40);
-  if (lowRisk.length === data.length && data.length > 0) {
-    insights.push({
-      icon: CheckCircle,
-      text: 'All suppliers operating within acceptable risk parameters',
-      type: 'success'
-    });
-  }
-
-  if (insights.length === 0) {
-    insights.push({
-      icon: Info,
-      text: 'Insufficient data — add more purchase orders for analysis',
-      type: 'info'
-    });
-  }
-
-  return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <Lightbulb className="w-5 h-5 text-amber-400" />
-        <h3 className="text-sm font-bold text-white">Procurement Insights</h3>
-      </div>
-      <div className="space-y-3">
-        {insights.map((insight, i) => {
-          const Icon = insight.icon;
-          const colors = {
-            warning: 'bg-amber-500/10 border-amber-500/25 text-amber-400',
-            info: 'bg-blue-500/10 border-blue-500/25 text-blue-400',
-            success: 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
-          };
-          return (
-            <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border ${colors[insight.type]}`}>
-              <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-slate-300 leading-relaxed">{insight.text}</p>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// 9. Mitigation Actions
-function MitigationActions({ data }: { data: SupplierRiskEntry[] }) {
-  const actions: { priority: 'high' | 'medium' | 'low'; text: string; vendor?: string }[] = [];
-
-  // High risk vendors
-  data.filter(d => d.risk.overallRiskScore >= 70).forEach(({ metrics, risk }) => {
-    if (risk.detectedRiskTypes.includes('Supplier Dependency Risk')) {
-      actions.push({
-        priority: 'high',
-        text: 'Diversify sourcing — qualify alternative suppliers immediately',
-        vendor: metrics.vendorName
-      });
-    }
-    if (risk.deliveryDelayRiskScore >= 20) {
-      actions.push({
-        priority: 'high',
-        text: 'Escalate delivery performance — issue formal improvement notice',
-        vendor: metrics.vendorName
-      });
-    }
-    actions.push({
-      priority: 'high',
-      text: 'Schedule executive review — critical supplier risk identified',
-      vendor: metrics.vendorName
-    });
-  });
-
-  // Medium risk vendors
-  data.filter(d => d.risk.overallRiskScore >= 40 && d.risk.overallRiskScore < 70).forEach(({ metrics }) => {
-    actions.push({
-      priority: 'medium',
-      text: 'Increase monitoring frequency — weekly performance tracking',
-      vendor: metrics.vendorName
-    });
-  });
-
-  // Low risk vendors
-  const lowRiskCount = data.filter(d => d.risk.overallRiskScore < 40).length;
-  if (lowRiskCount > 0) {
-    actions.push({
-      priority: 'low',
-      text: `Maintain standard review cadence for ${lowRiskCount} low-risk vendor(s)`
-    });
-  }
-
-  if (actions.length === 0) {
-    actions.push({
-      priority: 'low',
-      text: 'Continue regular supplier monitoring program'
-    });
-  }
-
-  const priorityColors = {
-    high: 'bg-red-500/15 text-red-400 border-red-500/30',
-    medium: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-    low: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-  };
-
-  return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <Target className="w-5 h-5 text-blue-400" />
-        <h3 className="text-sm font-bold text-white">Recommended Actions</h3>
-      </div>
-      <div className="space-y-3">
-        {actions.slice(0, 6).map((action, i) => (
-          <div key={i} className="flex items-start gap-3 p-3 bg-navy-700/50 rounded-lg">
-            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${priorityColors[action.priority]}`}>
-              {action.priority}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-slate-300 leading-snug">{action.text}</p>
-              {action.vendor && (
-                <p className="text-[10px] text-slate-500 mt-0.5">{action.vendor}</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Main Component ────────────────────────────────────────────────────────
 
 export default function Delivery({ onNavigate }: { onNavigate?: (page: string) => void }) {
@@ -1252,21 +330,9 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
   const [sortBy, setSortBy] = useState<SortOption>('earliest');
   const [perf, setPerf] = useState<Record<string, DeliveryPerformance>>(() => getDeliveryPerformance());
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
-  const [riskData, setRiskData] = useState(() => buildSupplierRiskData());
-  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(() => {
-    const data = buildSupplierRiskData();
-    return data.length > 0 ? data[0].risk.vendorId : null;
-  });
 
   const isDeliveredOrLater = (po: PurchaseOrder) =>
     STATUS_ORDER.indexOf(po.status) >= STATUS_ORDER.indexOf('delivered');
-
-  // Computed dashboard data
-  const dashboardData = useMemo(() => computeRiskDashboardData(riskData, pos), [riskData, pos]);
-  const selectedVendorEntry = useMemo(
-    () => riskData.find(d => d.risk.vendorId === selectedVendorId) || null,
-    [riskData, selectedVendorId]
-  );
 
   const enriched = useMemo(() => {
     return pos.map((po) => {
@@ -1389,14 +455,45 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
         return changed ? newPerf : prevPerf;
       });
 
-      setRiskData(buildSupplierRiskData());
-
       return updated;
     });
   }, []);
 
-  const handleSelectVendor = useCallback((vendorId: string) => {
-    setSelectedVendorId(vendorId);
+  const revertStatus = useCallback((poId: string) => {
+    setPos((prev) => {
+      const updated = prev.map((po) => {
+        if (po.id !== poId) return po;
+        const idx = STATUS_ORDER.indexOf(po.status);
+        if (idx <= 0) return po;
+        const prevStatus = STATUS_ORDER[idx - 1];
+        const updatedPo: PurchaseOrder & { actualDeliveryDate?: string } = { ...po, status: prevStatus };
+        // Delivered -> In Transit: remove actualDeliveryDate
+        if (po.status === 'delivered') {
+          delete (updatedPo as Record<string, unknown>).actualDeliveryDate;
+        }
+        return updatedPo;
+      });
+
+      savePurchaseOrders(updated);
+
+      // Remove delivery performance if reverting from delivered/invoiced
+      setPerf((prevPerf) => {
+        const newPerf = { ...prevPerf };
+        let changed = false;
+        updated.forEach((po) => {
+          if (po.status !== 'delivered' && po.status !== 'invoiced' && prevPerf[po.id]) {
+            delete newPerf[po.id];
+            changed = true;
+          }
+        });
+        if (changed) {
+          saveDeliveryPerformance(newPerf);
+        }
+        return changed ? newPerf : prevPerf;
+      });
+
+      return updated;
+    });
   }, []);
 
   const badgeItems: { key: string; label: string; count: number; color: string; bg: string; activeBg: string; pulse: boolean }[] = [
@@ -1646,16 +743,27 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
                     )}
                   </div>
 
-                  {/* Advance Status Button */}
-                  {po.status !== 'invoiced' && (
-                    <button
-                      onClick={() => advanceStatus(po.id)}
-                      className="relative z-2 flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-lg shadow-blue-900/20"
-                    >
-                      <ArrowRight className="w-3.5 h-3.5" />
-                      Advance Status
-                    </button>
-                  )}
+                  {/* Status Action Buttons */}
+                  <div className="flex items-center gap-2">
+                    {po.status !== 'ordered' && (
+                      <button
+                        onClick={() => revertStatus(po.id)}
+                        className="relative z-2 flex items-center gap-1.5 px-3.5 py-2 bg-navy-700 hover:bg-navy-600 border border-blue-900/40 text-slate-300 hover:text-white text-xs font-semibold rounded-lg transition-colors"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5" />
+                        Revert
+                      </button>
+                    )}
+                    {po.status !== 'invoiced' && (
+                      <button
+                        onClick={() => advanceStatus(po.id)}
+                        className="relative z-2 flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-lg shadow-blue-900/20"
+                      >
+                        <ArrowRight className="w-3.5 h-3.5" />
+                        Advance
+                      </button>
+                    )}
+                  </div>
 
                   {/* Notes Toggle Button */}
                   <button
@@ -1704,50 +812,6 @@ export default function Delivery({ onNavigate }: { onNavigate?: (page: string) =
           100% { transform: scale(1); }
         }
       `}</style>
-
-      {/* ── Supplier Risk Dashboard ────────────────────────────────── */}
-      <div className="border-t border-blue-900/40 pt-8 mt-8">
-        <div className="flex items-center gap-2 mb-6">
-          <ShieldAlert className="w-6 h-6 text-blue-400" />
-          <h2 className="text-xl font-bold text-white">Supplier Risk Dashboard</h2>
-        </div>
-
-        {riskData.length > 0 ? (
-          <>
-            {/* 1. KPI Cards */}
-            <RiskKPICards data={dashboardData} />
-
-            {/* 2. Risk Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
-              <RiskDistributionChart data={riskData} />
-              <DeliveryTrendChart pos={pos} />
-              <RiskBreakdownChart data={riskData} />
-            </div>
-
-            {/* 3. Vendor Ranking + Detail Panel */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-6">
-              <VendorRankingTable
-                data={riskData}
-                selectedVendorId={selectedVendorId}
-                onSelect={handleSelectVendor}
-              />
-              <VendorDetailPanel entry={selectedVendorEntry} pos={pos} />
-            </div>
-
-            {/* 4. Insights + Mitigation */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-              <ProcurementInsights data={riskData} />
-              <MitigationActions data={riskData} />
-            </div>
-          </>
-        ) : (
-          <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-10 text-center">
-            <ShieldAlert className="w-12 h-12 mx-auto mb-3 text-slate-600" />
-            <p className="text-slate-500 text-sm">No supplier risk data available yet.</p>
-            <p className="text-slate-600 text-xs mt-2">Create purchase orders to generate risk analytics.</p>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
