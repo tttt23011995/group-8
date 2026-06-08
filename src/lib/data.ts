@@ -18,7 +18,7 @@ export interface PurchaseOrder {
   vendorName: string;
   date: string;
   total: number;
-  status: 'pending' | 'approved' | 'shipped' | 'delivered' | 'overdue';
+  status: 'pending' | 'approved' | 'shipped' | 'delivered' | 'invoiced' | 'overdue';
   items: string;
   deliveryDate: string;
 }
@@ -32,9 +32,15 @@ export interface VendorRating {
   overall: number;
 }
 
+export interface DeliveryPerformance {
+  onTime: boolean;
+  daysDifference: number;
+}
+
 const VENDOR_KEY = 'vendors';
 const PO_KEY = 'purchaseOrders';
 const RATING_KEY = 'vendorRatings';
+const PERF_KEY = 'deliveryPerformance';
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 11);
@@ -173,9 +179,24 @@ export function seedData(): void {
     overall: v.score,
   }));
 
+  // Seed delivery performance for delivered/invoiced POs
+  const perfMap: Record<string, DeliveryPerformance> = {};
+  purchaseOrders.forEach((po) => {
+    if (po.status === 'delivered') {
+      const vendorIdx = vendors.findIndex((v) => v.id === po.vendorId);
+      // Only vendors[3] (SteelPeak, score 68) gets a late delivery
+      if (vendorIdx === 3) {
+        perfMap[po.id] = { onTime: false, daysDifference: 2 };
+      } else {
+        perfMap[po.id] = { onTime: true, daysDifference: 0 };
+      }
+    }
+  });
+
   localStorage.setItem(VENDOR_KEY, JSON.stringify(vendors));
   localStorage.setItem(PO_KEY, JSON.stringify(purchaseOrders));
   localStorage.setItem(RATING_KEY, JSON.stringify(vendorRatings));
+  saveDeliveryPerformance(perfMap);
 }
 
 export function getVendors(): Vendor[] {
@@ -205,6 +226,15 @@ export function saveVendorRatings(ratings: VendorRating[]): void {
   localStorage.setItem(RATING_KEY, JSON.stringify(ratings));
 }
 
+export function getDeliveryPerformance(): Record<string, DeliveryPerformance> {
+  const data = localStorage.getItem(PERF_KEY);
+  return data ? JSON.parse(data) : {};
+}
+
+export function saveDeliveryPerformance(perf: Record<string, DeliveryPerformance>): void {
+  localStorage.setItem(PERF_KEY, JSON.stringify(perf));
+}
+
 export function getMonthlyPOData(): { months: string[]; counts: number[] } {
   const pos = getPurchaseOrders();
   const now = new Date();
@@ -223,4 +253,14 @@ export function getMonthlyPOData(): { months: string[]; counts: number[] } {
   }
 
   return { months, counts };
+}
+
+export function getOpenPOCountForVendor(vendorId: string): number {
+  const pos = getPurchaseOrders();
+  return pos.filter(
+    (po) =>
+      po.vendorId === vendorId &&
+      po.status !== 'delivered' &&
+      po.status !== 'invoiced'
+  ).length;
 }
