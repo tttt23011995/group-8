@@ -16,15 +16,36 @@ import {
   EyeOff,
   Lock,
   Key,
+  Database,
 } from 'lucide-react';
-import { getVendors, Vendor } from '../lib/data';
+import { getVendors, Vendor, getPurchaseOrders, getVendorRatings, getDeliveryPerformance, getOpenPOCountForVendor } from '../lib/data';
 import {
   buildSupplierRiskData,
   RiskCategory,
   LegacySupplierMetrics,
   LegacySupplierRisk,
   LegacySupplierRiskEntry,
+  getSupplierRisk,
 } from '../lib/supplierRisk';
+
+// ── Safe math helpers ─────────────────────────────────────────────────────
+
+function safeNumber(v: unknown, fallback = 0): number {
+  const n = Number(v);
+  return isFinite(n) ? n : fallback;
+}
+
+function safeDivide(a: number, b: number): number {
+  if (!isFinite(b) || b === 0) return 0;
+  const r = a / b;
+  return isFinite(r) ? r : 0;
+}
+
+function safeAverage(arr: number[]): number {
+  if (!arr.length) return 0;
+  const sum = arr.reduce((s, v) => s + safeNumber(v), 0);
+  return safeDivide(sum, arr.length);
+}
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -53,35 +74,48 @@ interface SavedAnalysis {
 }
 
 interface SupplierContext {
+  vendorId: string;
   vendorName: string;
   category: string;
   location: string;
-  status: string;
+  status: 'active' | 'inactive';
   contractEnd: string;
   paymentTerms: string;
   leadTime: number;
+  vendorScore: number;
+
   totalOrders: number;
   lateOrders: number;
-  lateDeliveryRate: number;
   currentOverdueOrders: number;
   averageDelayDays: number;
   onTimeDeliveryRate: number;
   averageLeadTime: number;
-  openPOCount: number;
   supplierSpend: number;
   supplierSpendShare: number;
+
   vendorRatingOverall: number | null;
   vendorRatingDelivery: number | null;
   vendorRatingQuality: number | null;
   vendorRatingCost: number | null;
-  overallRiskScore: number;
-  riskLevel: string;
+
   deliveryDelayRiskScore: number;
   leadTimeRiskScore: number;
   supplierDependencyRiskScore: number;
   costConcentrationRiskScore: number;
   supplierPerformanceRiskScore: number;
-  detectedRisks: RiskCategory[];
+  overallRiskScore: number;
+  riskLevel: 'Low' | 'Medium' | 'High';
+  detectedRiskTypes: string[];
+
+  openPOCount: number;
+  lateDeliveryRate: number;
+
+  detectedRisks: Array<{
+    type: string;
+    severity: 'low' | 'medium' | 'high';
+    scoreImpact: number;
+    message: string;
+  }>;
 }
 
 interface FormData {
@@ -170,12 +204,13 @@ const LOADING_MESSAGES = [
 ];
 
 const STORAGE_KEY = 'riskAnalyses';
-const SESSION_KEY = 'groq_session_key';
+const SESSION_KEY = 'anthropic_session_key';
 
 // ── Key helpers — never touch React state ────────────────────────────────
 
-function getRuntimeKey(): string {
-  return sessionStorage.getItem(SESSION_KEY) || localStorage.getItem('apiKey') || '';
+function getRuntimeApiKey(): string | null {
+  const key = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem('apiKey') || '';
+  return key || null;
 }
 
 function hasSessionKey(): boolean {
@@ -204,49 +239,69 @@ function buildSupplierContext(entry: LegacySupplierRiskEntry): SupplierContext {
   const m: LegacySupplierMetrics = entry.metrics;
   const r: LegacySupplierRisk = entry.risk;
 
+  const totalOrders = safeNumber(m.totalOrders);
+  const lateOrders = safeNumber(m.lateOrders);
+  const lateDeliveryRate = safeDivide(lateOrders, totalOrders) * 100;
+
+  // Use new risk engine for richer detectedRisks if available
+  const newRisk = getSupplierRisk(m.vendorId);
+
+  const detectedRisks: SupplierContext['detectedRisks'] = newRisk
+    ? newRisk.detectedRisks.map((dr) => ({
+        type: dr.type,
+        severity: dr.severity,
+        scoreImpact: dr.scoreImpact,
+        message: dr.message,
+      }))
+    : r.detectedRiskTypes.map((type) => ({
+        type,
+        severity: (type.includes('Delay') || type.includes('Performance')
+          ? 'high'
+          : 'medium') as 'low' | 'medium' | 'high',
+        scoreImpact: 0,
+        message: type,
+      }));
+
+  const openPOCount = getOpenPOCountForVendor(m.vendorId);
+
   return {
+    vendorId: m.vendorId,
     vendorName: m.vendorName,
     category: m.vendor.category,
     location: m.vendor.location,
     status: m.vendor.status,
     contractEnd: m.vendor.contractEnd,
     paymentTerms: m.vendor.paymentTerms,
-    leadTime: m.vendorLeadTime,
-    totalOrders: m.totalOrders,
-    lateOrders: m.lateOrders,
-    lateDeliveryRate:
-      m.lateOrders > 0 && m.totalOrders > 0
-        ? (m.lateOrders / m.totalOrders) * 100
-        : 0,
-    currentOverdueOrders: m.currentOverdueOrders,
-    averageDelayDays: m.averageDelayDays,
-    onTimeDeliveryRate: m.onTimeDeliveryRate,
-    averageLeadTime: m.averageLeadTime,
-    openPOCount:
-      m.supplierOrderShare > 0
-        ? Math.round((m.totalOrders * m.supplierOrderShare) / 100)
-        : m.totalOrders,
-    supplierSpend: m.supplierSpend,
-    supplierSpendShare: m.supplierSpendShare,
+    leadTime: safeNumber(m.vendorLeadTime),
+    vendorScore: safeNumber(m.vendorScore),
+
+    totalOrders,
+    lateOrders,
+    currentOverdueOrders: safeNumber(m.currentOverdueOrders),
+    averageDelayDays: safeNumber(m.averageDelayDays),
+    onTimeDeliveryRate: safeNumber(m.onTimeDeliveryRate),
+    averageLeadTime: safeNumber(m.averageLeadTime),
+    supplierSpend: safeNumber(m.supplierSpend),
+    supplierSpendShare: safeNumber(m.supplierSpendShare),
+
     vendorRatingOverall: m.vendorRatingOverall,
     vendorRatingDelivery: m.vendorRatingDelivery,
     vendorRatingQuality: m.vendorRatingQuality,
     vendorRatingCost: m.vendorRatingCost,
-    overallRiskScore: r.overallRiskScore,
+
+    deliveryDelayRiskScore: safeNumber(r.deliveryDelayRiskScore),
+    leadTimeRiskScore: safeNumber(r.leadTimeRiskScore),
+    supplierDependencyRiskScore: safeNumber(r.supplierDependencyRiskScore),
+    costConcentrationRiskScore: safeNumber(r.costConcentrationRiskScore),
+    supplierPerformanceRiskScore: safeNumber(r.supplierPerformanceRiskScore),
+    overallRiskScore: safeNumber(r.overallRiskScore),
     riskLevel: r.riskLevel,
-    deliveryDelayRiskScore: r.deliveryDelayRiskScore,
-    leadTimeRiskScore: r.leadTimeRiskScore,
-    supplierDependencyRiskScore: r.supplierDependencyRiskScore,
-    costConcentrationRiskScore: r.costConcentrationRiskScore,
-    supplierPerformanceRiskScore: r.supplierPerformanceRiskScore,
-    detectedRisks: r.detectedRiskTypes.map((type) => ({
-      type,
-      severity: type.includes('Delay') || type.includes('Performance')
-        ? ('high' as const)
-        : ('medium' as const),
-      scoreImpact: 0,
-      message: type,
-    })),
+    detectedRiskTypes: r.detectedRiskTypes,
+
+    openPOCount,
+    lateDeliveryRate: parseFloat(lateDeliveryRate.toFixed(1)),
+
+    detectedRisks,
   };
 }
 
@@ -457,85 +512,199 @@ function HistoryPanel({
   );
 }
 
-// ── Supplier Context Badge ────────────────────────────────────────────────
+// ── Metric Tile ───────────────────────────────────────────────────────────
 
-function SupplierContextBadge({ ctx }: { ctx: SupplierContext }) {
+function MetricTile({
+  label,
+  value,
+  colorClass = 'text-white',
+}: {
+  label: string;
+  value: string | number;
+  colorClass?: string;
+}) {
+  return (
+    <div className="bg-navy-700/50 rounded-lg p-3">
+      <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">{label}</p>
+      <p className={`text-sm font-semibold ${colorClass}`}>{value}</p>
+    </div>
+  );
+}
+
+// ── Loaded Data Preview ───────────────────────────────────────────────────
+
+function LoadedDataPreview({ ctx }: { ctx: SupplierContext }) {
   const riskLevelLower = ctx.riskLevel.toLowerCase() as 'low' | 'medium' | 'high';
-  const colorMap = {
-    low: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/25',
-    medium: 'text-yellow-400 bg-yellow-500/15 border-yellow-500/25',
-    high: 'text-red-400 bg-red-500/15 border-red-500/25',
+  const riskColorMap = {
+    low: 'text-emerald-400',
+    medium: 'text-yellow-400',
+    high: 'text-red-400',
   };
-  const cls = colorMap[riskLevelLower] ?? colorMap.medium;
+  const riskColor = riskColorMap[riskLevelLower] ?? 'text-yellow-400';
+
+  const onTimeColor =
+    ctx.onTimeDeliveryRate >= 90
+      ? 'text-emerald-400'
+      : ctx.onTimeDeliveryRate >= 70
+      ? 'text-yellow-400'
+      : 'text-red-400';
+
+  const spendShareColor =
+    ctx.supplierSpendShare > 35
+      ? 'text-red-400'
+      : ctx.supplierSpendShare > 20
+      ? 'text-yellow-400'
+      : 'text-emerald-400';
+
+  const overdueColor = ctx.currentOverdueOrders > 0 ? 'text-red-400' : 'text-emerald-400';
+  const lateColor = ctx.lateOrders > 0 ? 'text-red-400' : 'text-emerald-400';
+
+  const overallRatingColor =
+    ctx.vendorRatingOverall === null
+      ? 'text-slate-500'
+      : ctx.vendorRatingOverall >= 85
+      ? 'text-emerald-400'
+      : ctx.vendorRatingOverall >= 70
+      ? 'text-yellow-400'
+      : 'text-red-400';
+
+  const delivRatingColor =
+    ctx.vendorRatingDelivery === null
+      ? 'text-slate-500'
+      : ctx.vendorRatingDelivery >= 85
+      ? 'text-emerald-400'
+      : ctx.vendorRatingDelivery >= 70
+      ? 'text-yellow-400'
+      : 'text-red-400';
+
+  const qualRatingColor =
+    ctx.vendorRatingQuality === null
+      ? 'text-slate-500'
+      : ctx.vendorRatingQuality >= 85
+      ? 'text-emerald-400'
+      : ctx.vendorRatingQuality >= 70
+      ? 'text-yellow-400'
+      : 'text-red-400';
+
+  const severityColors = {
+    high: 'bg-red-500/15 text-red-400 border-red-500/30',
+    medium: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+    low: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+  };
 
   return (
-    <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-white">Live Vendor Data Loaded</h3>
-        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${cls}`}>
-          {ctx.riskLevel} Risk ({ctx.overallRiskScore}/100)
+    <div className="mt-4 rounded-xl border border-blue-900/40 bg-navy-700/30 overflow-hidden">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-blue-900/30 flex items-center gap-2">
+        <Database className="w-4 h-4 text-blue-400" />
+        <h3 className="text-sm font-bold text-white">Loaded Data Preview</h3>
+        <span className="ml-auto text-[10px] text-slate-500 uppercase tracking-wide">
+          Live from procurement system
         </span>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-        <div>
-          <span className="text-slate-500">Status</span>
-          <p
-            className={`font-semibold ${
-              ctx.status === 'active' ? 'text-emerald-400' : 'text-slate-400'
-            }`}
-          >
-            {ctx.status}
-          </p>
+
+      <div className="p-4 space-y-4">
+        {/* Row 1 */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <MetricTile
+            label="Overall Risk Score"
+            value={`${ctx.overallRiskScore}/100`}
+            colorClass={riskColor}
+          />
+          <MetricTile
+            label="Risk Level"
+            value={ctx.riskLevel}
+            colorClass={riskColor}
+          />
+          <MetricTile
+            label="On-Time Rate"
+            value={`${ctx.onTimeDeliveryRate}%`}
+            colorClass={onTimeColor}
+          />
+          <MetricTile
+            label="Spend Share"
+            value={`${ctx.supplierSpendShare}%`}
+            colorClass={spendShareColor}
+          />
         </div>
-        <div>
-          <span className="text-slate-500">On-Time Rate</span>
-          <p
-            className={`font-semibold ${
-              ctx.onTimeDeliveryRate >= 90
-                ? 'text-emerald-400'
-                : ctx.onTimeDeliveryRate >= 70
-                ? 'text-yellow-400'
-                : 'text-red-400'
-            }`}
-          >
-            {ctx.onTimeDeliveryRate}%
-          </p>
+
+        {/* Row 2 */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <MetricTile label="Total Orders" value={ctx.totalOrders} />
+          <MetricTile
+            label="Late Orders"
+            value={ctx.lateOrders}
+            colorClass={lateColor}
+          />
+          <MetricTile
+            label="Overdue POs"
+            value={ctx.currentOverdueOrders}
+            colorClass={overdueColor}
+          />
+          <MetricTile
+            label="Avg Delay"
+            value={ctx.averageDelayDays > 0 ? `${ctx.averageDelayDays}d` : 'None'}
+            colorClass={ctx.averageDelayDays > 0 ? 'text-yellow-400' : 'text-emerald-400'}
+          />
         </div>
-        <div>
-          <span className="text-slate-500">Total Spend</span>
-          <p className="font-semibold text-white">${ctx.supplierSpend.toLocaleString()}</p>
+
+        {/* Row 3 */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <MetricTile
+            label="Overall Rating"
+            value={ctx.vendorRatingOverall !== null ? `${ctx.vendorRatingOverall}/100` : 'N/A'}
+            colorClass={overallRatingColor}
+          />
+          <MetricTile
+            label="Delivery Rating"
+            value={ctx.vendorRatingDelivery !== null ? `${ctx.vendorRatingDelivery}/100` : 'N/A'}
+            colorClass={delivRatingColor}
+          />
+          <MetricTile
+            label="Quality Rating"
+            value={ctx.vendorRatingQuality !== null ? `${ctx.vendorRatingQuality}/100` : 'N/A'}
+            colorClass={qualRatingColor}
+          />
+          <MetricTile
+            label="Lead Time"
+            value={`${ctx.leadTime}d declared / ${ctx.averageLeadTime}d avg`}
+          />
         </div>
-        <div>
-          <span className="text-slate-500">Late Orders</span>
-          <p
-            className={`font-semibold ${
-              ctx.lateOrders > 0 ? 'text-red-400' : 'text-emerald-400'
-            }`}
-          >
-            {ctx.lateOrders}
-          </p>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {ctx.detectedRisks.map((r, i) => (
-          <span
-            key={i}
-            className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/20"
-          >
-            {r.type}
-          </span>
-        ))}
+
+        {/* Detected Risk Flags */}
+        {ctx.detectedRisks.length > 0 && (
+          <div>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-2">
+              System-Detected Risk Flags
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {ctx.detectedRisks.map((r, i) => (
+                <span
+                  key={i}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border ${
+                    severityColors[r.severity]
+                  }`}
+                >
+                  <span className="uppercase text-[9px] opacity-70">{r.severity[0]}</span>
+                  {r.type}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {ctx.detectedRisks.length === 0 && (
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            No risk flags detected
-          </span>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+            <p className="text-xs text-emerald-400">No risk flags detected by procurement system</p>
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-// ── API Key Manager (inside Demo Mode card) ───────────────────────────────
+// ── API Key Manager ───────────────────────────────────────────────────────
 
 function ApiKeyManager({ onKeyChange }: { onKeyChange: () => void }) {
   const [inputValue, setInputValue] = useState('');
@@ -635,8 +804,8 @@ export default function AIRisk() {
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [supplierCtx, setSupplierCtx] = useState<SupplierContext | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
-  const [demoMode, setDemoMode] = useState(() => !getRuntimeKey());
-  const [autoDemoBanner, setAutoDemoBanner] = useState(() => !getRuntimeKey());
+  const [demoMode, setDemoMode] = useState(() => !getRuntimeApiKey());
+  const [autoDemoBanner, setAutoDemoBanner] = useState(() => !getRuntimeApiKey());
   const [loading, setLoading] = useState(false);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [result, setResult] = useState<RiskAnalysis | null>(null);
@@ -645,9 +814,8 @@ export default function AIRisk() {
   const [history, setHistory] = useState<SavedAnalysis[]>(() => getSavedAnalyses());
   const loadingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Called whenever the session key state changes
   function handleKeyChange() {
-    const hasKey = !!getRuntimeKey();
+    const hasKey = !!getRuntimeApiKey();
     if (hasKey) {
       setDemoMode(false);
       setAutoDemoBanner(false);
@@ -657,7 +825,6 @@ export default function AIRisk() {
     }
   }
 
-  // Loading message cycling
   useEffect(() => {
     if (loading) {
       loadingTimerRef.current = setInterval(() => {
@@ -694,7 +861,7 @@ export default function AIRisk() {
         avgDeliveryDelay: String(ctx.averageDelayDays),
         avgQualityScore:
           ctx.vendorRatingQuality !== null
-            ? String(Math.round(ctx.vendorRatingQuality / 20))
+            ? String(Math.min(5, Math.max(1, Math.round(ctx.vendorRatingQuality / 20))))
             : '3',
         paymentTerms: ctx.paymentTerms || 'Net 30',
         notes: '',
@@ -719,6 +886,94 @@ export default function AIRisk() {
     setForm(emptyForm);
   }
 
+  // Build the enriched vendor prompt using live SupplierContext
+  function buildVendorPrompt(ctx: SupplierContext): string {
+    const spendOverride =
+      form.annualSpend && form.annualSpend !== String(Math.round(ctx.supplierSpend))
+        ? `$${parseInt(form.annualSpend, 10).toLocaleString()} (manual override)`
+        : `$${ctx.supplierSpend.toLocaleString()} (from procurement records)`;
+
+    const riskEvidence =
+      ctx.detectedRisks.length > 0
+        ? ctx.detectedRisks
+            .map(
+              (r) =>
+                `  [${r.severity.toUpperCase()}] ${r.type} (+${r.scoreImpact} pts): ${r.message}`
+            )
+            .join('\n')
+        : '  No risk flags detected by the procurement system.';
+
+    return `You are analyzing procurement risk for a LIVE vendor from our procurement system.
+The application has already calculated ALL risk scores and detected all risk flags.
+Your job is ONLY to explain and recommend — do NOT recalculate, re-score, or invent data.
+If data is not provided, say "Insufficient supporting procurement data available."
+
+=== VENDOR PROFILE ===
+Name: ${ctx.vendorName}
+Category: ${ctx.category}
+Location: ${ctx.location}
+Status: ${ctx.status}
+Contract Expiry: ${ctx.contractEnd}
+Payment Terms: ${ctx.paymentTerms}
+Declared Lead Time: ${ctx.leadTime} days
+
+=== HISTORICAL PROCUREMENT PERFORMANCE ===
+Total Orders Placed: ${ctx.totalOrders}
+Late Orders: ${ctx.lateOrders} (${ctx.lateDeliveryRate.toFixed(1)}% late rate)
+Currently Overdue POs: ${ctx.currentOverdueOrders}
+Open (Unfulfilled) POs: ${ctx.openPOCount}
+Average Delay When Late: ${ctx.averageDelayDays} days
+On-Time Delivery Rate: ${ctx.onTimeDeliveryRate}%
+Actual Average Lead Time: ${ctx.averageLeadTime} days
+
+=== FINANCIAL EXPOSURE ===
+Annual Spend: ${spendOverride}
+Spend Share of Total Procurement: ${ctx.supplierSpendShare}%
+Alternative Suppliers Known: ${form.alternativeSuppliers} (0 = sole source dependency)
+
+=== VENDOR RATINGS (0–100 scale) ===
+Overall: ${ctx.vendorRatingOverall !== null ? ctx.vendorRatingOverall : 'Not rated'}
+Delivery: ${ctx.vendorRatingDelivery !== null ? ctx.vendorRatingDelivery : 'Not rated'}
+Quality: ${ctx.vendorRatingQuality !== null ? ctx.vendorRatingQuality : 'Not rated'}
+Cost: ${ctx.vendorRatingCost !== null ? ctx.vendorRatingCost : 'Not rated'}
+
+=== SYSTEM-COMPUTED RISK SCORES (pre-calculated — do NOT recalculate) ===
+Overall Risk Score: ${ctx.overallRiskScore}/100 → ${ctx.riskLevel} Risk
+  Delivery Delay Risk:       ${ctx.deliveryDelayRiskScore}/30
+  Lead Time Risk:            ${ctx.leadTimeRiskScore}/20
+  Supplier Dependency Risk:  ${ctx.supplierDependencyRiskScore}/20
+  Cost Concentration Risk:   ${ctx.costConcentrationRiskScore}/15
+  Performance Risk:          ${ctx.supplierPerformanceRiskScore}/15
+
+=== DETECTED RISK FLAGS (system-generated evidence) ===
+${riskEvidence}
+
+=== ADDITIONAL NOTES ===
+${form.notes || 'No additional notes provided.'}
+
+INSTRUCTIONS:
+- Reference REAL numbers from the data above in every section.
+- For supplyChain: focus on delivery reliability, lead times, alternative supplier count, overdue PO impact.
+- For financial: focus on spend share, payment terms, contract status, cost concentration.
+- For operational: focus on ratings, quality, delivery consistency, open PO backlog.
+- Every mitigation must name a specific metric target or timeframe (e.g., "until on-time rate exceeds 85%").
+- When currentOverdueOrders > 0, include an immediate escalation action in operational mitigations.
+- Do NOT give generic advice like "improve communication" or "monitor closely" without specifics.`;
+  }
+
+  // Build the manual entry prompt (unchanged from prior behavior)
+  function buildManualPrompt(): string {
+    return `Analyze procurement risk for:
+Vendor: ${form.vendorName}
+Product Category: ${form.category}
+Annual Spend: $${safeNumber(parseInt(form.annualSpend, 10))}
+Alternative Suppliers: ${form.alternativeSuppliers} (0 = sole source)
+Average Delivery Delay: ${form.avgDeliveryDelay} days
+Average Quality Score: ${form.avgQualityScore}/5
+Payment Terms: ${form.paymentTerms}
+Recent Issues: ${form.notes || 'None reported'}`;
+  }
+
   const handleAnalyze = useCallback(async () => {
     if (!form.vendorName.trim()) return;
 
@@ -726,81 +981,10 @@ export default function AIRisk() {
     setResult(null);
     setLoading(true);
 
-    // Build prompts
     const userPrompt =
       selectedVendorId && supplierCtx
-        ? `You are analyzing procurement risk for a vendor with the following LIVE DATA pulled from our procurement system.
-
-=== VENDOR PROFILE ===
-Name: ${supplierCtx.vendorName}
-Category: ${supplierCtx.category}
-Location: ${supplierCtx.location}
-Status: ${supplierCtx.status}
-Contract Expiry: ${supplierCtx.contractEnd}
-Payment Terms: ${supplierCtx.paymentTerms}
-Declared Lead Time: ${supplierCtx.leadTime} days
-
-=== HISTORICAL PERFORMANCE (from order history) ===
-Total Orders Placed: ${supplierCtx.totalOrders}
-Late Orders: ${supplierCtx.lateOrders} (${supplierCtx.lateDeliveryRate.toFixed(1)}% late rate)
-Currently Overdue POs: ${supplierCtx.currentOverdueOrders}
-Average Delay When Late: ${supplierCtx.averageDelayDays} days
-On-Time Delivery Rate: ${supplierCtx.onTimeDeliveryRate}%
-Actual Average Lead Time: ${supplierCtx.averageLeadTime} days
-Open (Unfulfilled) POs: ${supplierCtx.openPOCount}
-
-=== FINANCIAL EXPOSURE ===
-Annual Spend with this Vendor: $${supplierCtx.supplierSpend.toLocaleString()}
-Spend Share of Total Procurement: ${supplierCtx.supplierSpendShare}%
-Manually Provided Annual Spend Override: ${
-            form.annualSpend &&
-            form.annualSpend !== String(Math.round(supplierCtx.supplierSpend))
-              ? '$' + parseInt(form.annualSpend).toLocaleString()
-              : 'None'
-          }
-
-=== VENDOR RATINGS (1-100 scale) ===
-Overall: ${supplierCtx.vendorRatingOverall ?? 'Not rated'}
-Delivery: ${supplierCtx.vendorRatingDelivery ?? 'Not rated'}
-Quality: ${supplierCtx.vendorRatingQuality ?? 'Not rated'}
-Cost: ${supplierCtx.vendorRatingCost ?? 'Not rated'}
-
-=== SYSTEM-COMPUTED RISK SCORES ===
-Overall Risk Score: ${supplierCtx.overallRiskScore}/100 (${supplierCtx.riskLevel} Risk)
-  - Delivery Delay Risk: ${supplierCtx.deliveryDelayRiskScore}/30
-  - Lead Time Risk: ${supplierCtx.leadTimeRiskScore}/20
-  - Supplier Dependency Risk: ${supplierCtx.supplierDependencyRiskScore}/20
-  - Cost Concentration Risk: ${supplierCtx.costConcentrationRiskScore}/15
-  - Performance Risk: ${supplierCtx.supplierPerformanceRiskScore}/15
-
-=== DETECTED RISK FLAGS ===
-${
-  supplierCtx.detectedRisks.length > 0
-    ? supplierCtx.detectedRisks
-        .map((r) => `[${r.severity.toUpperCase()}] ${r.type}: ${r.message}`)
-        .join('\n')
-    : 'No risk flags detected'
-}
-
-=== ALTERNATIVE SUPPLIERS ===
-Known Alternative Suppliers: ${form.alternativeSuppliers} (0 = sole source dependency)
-
-=== ADDITIONAL CONTEXT ===
-${form.notes || 'No additional notes provided.'}
-
-Based on ALL of the above real procurement data, provide a comprehensive risk assessment
-with specific, data-driven observations. Reference actual numbers from the data above
-(e.g., mention the specific late rate, the spend share percentage, the risk scores).
-Do NOT give generic advice — tailor every factor and mitigation to this vendor's actual data.`
-        : `Analyze procurement risk for:
-Vendor: ${form.vendorName}
-Product Category: ${form.category}
-Annual Spend: $${parseInt(form.annualSpend) || 0}
-Alternative Suppliers: ${form.alternativeSuppliers} (0 = sole source)
-Average Delivery Delay: ${form.avgDeliveryDelay} days
-Average Quality Score: ${form.avgQualityScore}/5
-Payment Terms: ${form.paymentTerms}
-Recent Issues: ${form.notes || 'None reported'}`;
+        ? buildVendorPrompt(supplierCtx)
+        : buildManualPrompt();
 
     const systemPrompt = `You are a procurement risk analyst. Respond ONLY with a valid JSON object (no markdown, no extra text, no code fences) with this exact structure:
 {
@@ -832,7 +1016,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
         timestamp: new Date().toISOString(),
         vendorName: form.vendorName,
         category: form.category,
-        annualSpend: parseInt(form.annualSpend) || 0,
+        annualSpend: safeNumber(parseInt(form.annualSpend, 10)),
         result: DEMO_RESULT,
         demoMode: true,
         selectedVendorId,
@@ -844,12 +1028,10 @@ Recent Issues: ${form.notes || 'None reported'}`;
       return;
     }
 
-    // Read key fresh — never from state
-    const runtimeKey =
-      sessionStorage.getItem(SESSION_KEY) || localStorage.getItem('apiKey') || '';
+    // Read key fresh at request time — never from state
+    const runtimeKey = getRuntimeApiKey();
 
     if (!runtimeKey) {
-      // Auto-fallback to demo mode rather than throwing
       setDemoMode(true);
       await new Promise((r) => setTimeout(r, 1800));
       const analysis: SavedAnalysis = {
@@ -857,7 +1039,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
         timestamp: new Date().toISOString(),
         vendorName: form.vendorName,
         category: form.category,
-        annualSpend: parseInt(form.annualSpend) || 0,
+        annualSpend: safeNumber(parseInt(form.annualSpend, 10)),
         result: DEMO_RESULT,
         demoMode: true,
         selectedVendorId,
@@ -901,7 +1083,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
       }
 
       const data = await res.json();
-      const content = data?.choices?.[0]?.message?.content ?? '';
+      const content: string = data?.choices?.[0]?.message?.content ?? '';
 
       let parsed: RiskAnalysis;
       try {
@@ -927,7 +1109,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
         timestamp: new Date().toISOString(),
         vendorName: form.vendorName,
         category: form.category,
-        annualSpend: parseInt(form.annualSpend) || 0,
+        annualSpend: safeNumber(parseInt(form.annualSpend, 10)),
         result: parsed,
         demoMode: false,
         selectedVendorId,
@@ -944,6 +1126,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, demoMode, selectedVendorId, supplierCtx]);
 
   function handleRetry() {
@@ -972,6 +1155,8 @@ Recent Issues: ${form.notes || 'None reported'}`;
     setHistory(updated);
   }
 
+  const isVendorMode = !!selectedVendorId && !!supplierCtx;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -982,7 +1167,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
             AI Risk Analyzer
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            AI-powered procurement risk assessment with mitigation strategies
+            Procurement-aware AI risk assessment with data-driven mitigation strategies
           </p>
         </div>
         <button
@@ -1060,11 +1245,22 @@ Recent Issues: ${form.notes || 'None reported'}`;
 
       {/* Input Form */}
       <div className="relative z-1 bg-navy-800 border border-blue-900/40 rounded-xl p-5 sm:p-6">
-        <h2 className="text-lg font-bold text-white mb-4">Risk Assessment Parameters</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-white">Risk Assessment Parameters</h2>
+          {isVendorMode && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/25">
+              <Database className="w-3 h-3" />
+              Vendor-Selected Mode
+            </span>
+          )}
+        </div>
 
-        {/* Vendor selector */}
-        <div className="mb-5">
-          <label className="block text-sm text-slate-400 mb-1.5">Load from Vendor Directory</label>
+        {/* Vendor Selector */}
+        <div className="mb-4">
+          <label className="block text-sm text-slate-400 mb-1.5">
+            Load from Vendor Directory
+            <span className="text-slate-600 ml-1">(optional — auto-fills all procurement data)</span>
+          </label>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -1073,7 +1269,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
                 onChange={(e) => handleVendorSelect(e.target.value)}
                 className="w-full pl-10 pr-10 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2"
               >
-                <option value="">Select a vendor...</option>
+                <option value="">Select a vendor to load live data...</option>
                 {vendors.map((v: Vendor) => (
                   <option key={v.id} value={v.id}>
                     {v.name} ({v.category})
@@ -1094,10 +1290,14 @@ Recent Issues: ${form.notes || 'None reported'}`;
           </div>
         </div>
 
-        {supplierCtx && <SupplierContextBadge ctx={supplierCtx} />}
+        {/* Loaded Data Preview — only in vendor mode */}
+        {isVendorMode && supplierCtx && (
+          <LoadedDataPreview ctx={supplierCtx} />
+        )}
 
+        {/* Supplementary / Manual inputs */}
         <div className="space-y-4 mt-5">
-          {/* Row 1 */}
+          {/* Vendor Name + Category — read-only in vendor mode */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-slate-400 mb-1.5">
@@ -1106,39 +1306,56 @@ Recent Issues: ${form.notes || 'None reported'}`;
               <input
                 type="text"
                 value={form.vendorName}
-                onChange={(e) => setForm({ ...form, vendorName: e.target.value })}
-                className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+                onChange={(e) => !isVendorMode && setForm({ ...form, vendorName: e.target.value })}
+                readOnly={isVendorMode}
+                className={`w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${
+                  isVendorMode ? 'opacity-60 cursor-default' : ''
+                }`}
                 placeholder="Enter vendor name"
               />
             </div>
             <div>
               <label className="block text-sm text-slate-400 mb-1.5">Product Category</label>
               <div className="relative">
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                {isVendorMode ? (
+                  <input
+                    type="text"
+                    value={form.category}
+                    readOnly
+                    className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm opacity-60 cursor-default relative z-2"
+                  />
+                ) : (
+                  <>
+                    <select
+                      value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
+                    >
+                      {CATEGORIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Row 2 */}
+          {/* Spend + Alt Suppliers + Delay */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm text-slate-400 mb-1.5">
                 Annual Spend (USD)
-                {supplierCtx &&
-                  form.annualSpend !== String(Math.round(supplierCtx.supplierSpend)) && (
-                    <span className="text-blue-400 ml-1 text-xs">(override)</span>
-                  )}
+                {isVendorMode && (
+                  <span className="text-blue-400 ml-1 text-xs">
+                    {form.annualSpend !== String(Math.round(supplierCtx?.supplierSpend ?? 0))
+                      ? '(override)'
+                      : '(from system)'}
+                  </span>
+                )}
               </label>
               <input
                 type="number"
@@ -1163,62 +1380,76 @@ Recent Issues: ${form.notes || 'None reported'}`;
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Avg Delivery Delay (days)</label>
+              <label className="block text-sm text-slate-400 mb-1.5">
+                Avg Delivery Delay (days)
+                {isVendorMode && (
+                  <span className="text-slate-500 ml-1 text-xs">(from system)</span>
+                )}
+              </label>
               <input
                 type="number"
                 value={form.avgDeliveryDelay}
-                onChange={(e) => setForm({ ...form, avgDeliveryDelay: e.target.value })}
-                className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+                onChange={(e) => !isVendorMode && setForm({ ...form, avgDeliveryDelay: e.target.value })}
+                readOnly={isVendorMode}
+                className={`w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 ${
+                  isVendorMode ? 'opacity-60 cursor-default' : ''
+                }`}
                 min="0"
               />
             </div>
           </div>
 
-          {/* Row 3 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-slate-400 mb-1.5">
-                Avg Quality Score <span className="text-slate-600">(1-5)</span>
-              </label>
-              <input
-                type="number"
-                value={form.avgQualityScore}
-                onChange={(e) => {
-                  const val = Math.min(5, Math.max(1, parseInt(e.target.value) || 1));
-                  setForm({ ...form, avgQualityScore: String(val) });
-                }}
-                className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
-                min="1"
-                max="5"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Payment Terms</label>
-              <div className="relative">
-                <select
-                  value={form.paymentTerms}
-                  onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}
-                  className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
-                >
-                  {PAYMENT_TERMS.map((pt) => (
-                    <option key={pt} value={pt}>
-                      {pt}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+          {/* Quality + Payment Terms — read-only in vendor mode */}
+          {!isVendorMode && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-slate-400 mb-1.5">
+                  Avg Quality Score <span className="text-slate-600">(1-5)</span>
+                </label>
+                <input
+                  type="number"
+                  value={form.avgQualityScore}
+                  onChange={(e) => {
+                    const val = Math.min(5, Math.max(1, parseInt(e.target.value) || 1));
+                    setForm({ ...form, avgQualityScore: String(val) });
+                  }}
+                  className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2"
+                  min="1"
+                  max="5"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-1.5">Payment Terms</label>
+                <div className="relative">
+                  <select
+                    value={form.paymentTerms}
+                    onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}
+                    className="w-full bg-navy-700 border border-blue-900/40 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 appearance-none relative z-2 pr-10"
+                  >
+                    {PAYMENT_TERMS.map((pt) => (
+                      <option key={pt} value={pt}>
+                        {pt}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Row 4 */}
+          {/* Recent Issues / Notes */}
           <div>
             <label className="block text-sm text-slate-400 mb-1.5">Recent Issues or Notes</label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               className="w-full px-4 py-2.5 bg-navy-700 border border-blue-900/40 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 relative z-2 resize-none"
-              placeholder="Describe any recent issues, delays, quality problems, or concerns..."
+              placeholder={
+                isVendorMode
+                  ? 'Add any recent issues or observations not captured in the system...'
+                  : 'Describe any recent issues, delays, quality problems, or concerns...'
+              }
               rows={3}
             />
           </div>
@@ -1237,7 +1468,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
             ) : (
               <>
                 <ChevronRight className="w-4 h-4" />
-                Analyze Risk
+                {isVendorMode ? 'Analyze with Live Procurement Data' : 'Analyze Risk'}
               </>
             )}
           </button>
@@ -1259,7 +1490,7 @@ Recent Issues: ${form.notes || 'None reported'}`;
           </div>
           {supplierCtx && (
             <p className="text-xs text-slate-500 mt-3">
-              Analyzing live data for{' '}
+              Analyzing live procurement data for{' '}
               <span className="text-blue-400">{supplierCtx.vendorName}</span>
             </p>
           )}
@@ -1319,7 +1550,9 @@ Recent Issues: ${form.notes || 'None reported'}`;
               <p className="text-xs text-slate-400">
                 Analysis based on live procurement data for{' '}
                 <span className="text-blue-400 font-medium">{supplierCtx.vendorName}</span>{' '}
-                (Overall Risk: {supplierCtx.overallRiskScore}/100, {supplierCtx.riskLevel} Risk)
+                — Overall Risk Score: {supplierCtx.overallRiskScore}/100 ({supplierCtx.riskLevel} Risk),{' '}
+                {supplierCtx.lateOrders} late order{supplierCtx.lateOrders !== 1 ? 's' : ''},{' '}
+                {supplierCtx.currentOverdueOrders} overdue PO{supplierCtx.currentOverdueOrders !== 1 ? 's' : ''}
               </p>
             </div>
           )}
